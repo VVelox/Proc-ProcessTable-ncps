@@ -30,6 +30,9 @@ sub help{
 -s            Show swapped out procs.
 --si          Invert the swapped out search.
 
+--st <states> A comma seperated list of states to search for.
+--sti         Invert the state search.
+
 -t <times>    A comma seperated value of time, in seconds, to search for.
 --ti          Invert the time search.
 
@@ -61,6 +64,8 @@ my $rss_string;
 my $rss_invert=0;
 my $time_string;
 my $time_invert=0;
+my $states_string;
+my $states_invert=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -87,6 +92,8 @@ GetOptions(
 		   'ri' => \$rss_invert,
 		   't=s' => \$time_string,
 		   'ti' => \$time_invert,
+		   'st=s' => \$states_string,
+		   'sti' => \$states_invert,
 		   );
 
 # print the version info if requested
@@ -208,6 +215,20 @@ if ( defined( $time_string ) ){
 					 invert=>$time_invert,
 					 args=>{
 							times=>\@times,
+							},
+					 });
+}
+
+#
+# handles the time search
+#
+if ( defined( $states_string ) ){
+	my @states=split(/\,/, $states_string );
+	push( @filters, {
+					 type=>'State',
+					 invert=>$states_invert,
+					 args=>{
+							states=>\@states,
 							},
 					 });
 }
