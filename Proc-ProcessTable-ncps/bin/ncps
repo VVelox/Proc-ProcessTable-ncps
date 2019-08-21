@@ -24,13 +24,62 @@ sub help{
 -m <pctmem search>   A numeric search for memory usage percent
 
 -w <wait channels>   A string search for wait channels.
-
+--wi
 
 ';
 }
 
+# defaults
+my $wait_channels_string;
+my $wait_channels_invert=0;
+my $version;
+my $help;
+
+# get the commandline options
+Getopt::Long::Configure ('no_ignore_case');
+Getopt::Long::Configure ('bundling');
+GetOptions(
+		   'w=s' => \$wait_channels_string,
+		   'wi' => \$wait_channels_invert,
+		   'h' => \$help,
+		   'help' => \$help,
+		   'v' => \$version,
+		   'version' => \$version,
+		   );
+
+# print the version info if requested
+if ( $version ){
+        &version;
+        exit;
+}
+
+if ( $help ){
+        &version;
+        &help;
+        exit;
+}
+
+my @filters;
+
+#
+# handles wait channels
+#
+if ( defined( $wait_channels_string ) ){
+	my @wchans=split(/\,/, $wait_channels_string );
+	push( @filters, {
+					 type=>'WChan',
+					 invert=>$wait_channels_invert,
+					 args=>{
+							wchans=>\@wchans,
+							},
+					 });
+}
+
 my $args={
 		  invert=>0,
+		  match=>{
+				  checks=>\@filters,
+				  }
 		  };
 
 my $ncps=Proc::ProcessTable::ncps->new( $args );

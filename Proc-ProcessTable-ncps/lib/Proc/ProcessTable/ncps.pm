@@ -47,7 +47,11 @@ sub new {
 				};
     bless $self;
 
-	if ( defined( $args{match} ) ){
+	if (
+		defined( $args{match} ) &&
+		defined( $args{match}{checks} ) &&
+		defined( $args{match}{checks}[0] )
+		){
 		$self->{match}=Proc::ProcessTable::Match->new( $args{match} );
 	}
 
