@@ -137,32 +137,32 @@ sub run{
 			#
 			# handles the %CPU
 			#
-			push( @new_line,  color('bright_green').$proc->{pctcpu}.color('reset') );
+			push( @new_line,  color('bright_magenta').$proc->{pctcpu}.color('reset') );
 
 			#
 			# handles the %MEM
 			#
 			if ( $^O =~ /bsd/ ) {
 				my $mem=(($proc->{rssize} * 1024 * 4 ) / $physmem) * 100;
-				push( @new_line,  color('bright_green').sprintf('%.2f', $mem).color('reset') );
+				push( @new_line,  color('bright_blue').sprintf('%.2f', $mem).color('reset') );
 			} else {
-				push( @new_line,  color('bright_green').sprintf('%.2f', $proc->{pctcpu}).color('reset') );
+				push( @new_line,  color('bright_blue').sprintf('%.2f', $proc->{pctcpu}).color('reset') );
 			}
 
 			#
 			# handles VSZ
 			#
-			push( @new_line,  color('bright_green').$proc->{size}.color('reset') );
+			push( @new_line,  color('bright_yellow').$proc->{size}.color('reset') );
 
 			#
 			# handles the rss
 			#
-			push( @new_line,  color('bright_green').$proc->{rss}.color('reset') );
+			push( @new_line,  color('bright_cyan').$proc->{rss}.color('reset') );
 
 			#
 			# handles the info
 			#
-			my $info=color('bright_magenta');
+			my $info;
 			my %flags;
 			$flags{is_session_leader}=0;
 			$flags{is_being_forked}=0;
@@ -216,6 +216,7 @@ sub run{
 					 ) {
 				$info='R';
 			}
+			$info=color('bright_magenta').$info;
 			#checks if it is swapped out
 			if (
 				( $proc->{state} ne 'zombie' ) &&
@@ -268,7 +269,7 @@ sub run{
 			#
 			# handles the start column
 			#
-			push( @new_line, color('bright_cyan').$self->startString( $proc->{start} ).color('reset') );
+			push( @new_line, color('bright_yellow').$self->startString( $proc->{start} ).color('reset') );
 
 			#
 			# handles the time column
