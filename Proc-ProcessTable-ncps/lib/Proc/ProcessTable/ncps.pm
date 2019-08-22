@@ -44,6 +44,20 @@ sub new {
 	my $self = {
 				invert=>0,
 				match=>undef,
+				colors=>[
+						 'BRIGHT_YELLOW',
+						 'BRIGHT_CYAN',
+						 'BRIGHT_MAGENTA',
+						 'BRIGHT_BLUE'
+						 ],
+				timeColors=>[
+							 'GREEN',
+							 'BRIGHT_GREEN',
+							 'RED',
+							 'BRIGHT_RED'
+							 ],
+				processColor=>'BRIGHT_RED',
+				nextColor=>0,
 				};
     bless $self;
 
@@ -130,38 +144,38 @@ sub run{
 			if ( ! defined( $user ) ) {
 				$user=$proc->{uid};
 			}
-			$user=color('bright_yellow').$user.color('reset');
+			$user=color($self->nextColor).$user.color('reset');
 			push( @new_line, $user );
 
 			#
 			# handles the PID
 			#
-			push( @new_line,  color('bright_cyan').$proc->{pid}.color('reset') );
+			push( @new_line,  color($self->nextColor).$proc->{pid}.color('reset') );
 
 			#
 			# handles the %CPU
 			#
-			push( @new_line,  color('bright_magenta').$proc->{pctcpu}.color('reset') );
+			push( @new_line,  color($self->nextColor).$proc->{pctcpu}.color('reset') );
 
 			#
 			# handles the %MEM
 			#
 			if ( $^O =~ /bsd/ ) {
 				my $mem=(($proc->{rssize} * 1024 * 4 ) / $physmem) * 100;
-				push( @new_line,  color('bright_blue').sprintf('%.2f', $mem).color('reset') );
+				push( @new_line,  color($self->nextColor).sprintf('%.2f', $mem).color('reset') );
 			} else {
-				push( @new_line,  color('bright_blue').sprintf('%.2f', $proc->{pctcpu}).color('reset') );
+				push( @new_line,  color($self->nextColor).sprintf('%.2f', $proc->{pctcpu}).color('reset') );
 			}
 
 			#
 			# handles VSZ
 			#
-			push( @new_line,  color('bright_yellow').$proc->{size}.color('reset') );
+			push( @new_line,  color($self->nextColor).$proc->{size}.color('reset') );
 
 			#
 			# handles the rss
 			#
-			push( @new_line,  color('bright_cyan').$proc->{rss}.color('reset') );
+			push( @new_line,  color($self->nextColor).$proc->{rss}.color('reset') );
 
 			#
 			# handles the info
@@ -220,7 +234,7 @@ sub run{
 					 ) {
 				$info='R';
 			}
-			$info=color('bright_magenta').$info;
+			$info=color($self->nextColor).$info;
 			#checks if it is swapped out
 			if (
 				( $proc->{state} ne 'zombie' ) &&
@@ -254,7 +268,7 @@ sub run{
 			}
 			;
 			# adds the wchan
-			$info=$info.' '.color('bright_blue');
+			$info=$info.' '.color($self->nextColor);
 			if ( $^O =~ /linux/ ) {
 				my $wchan='';
 				if ( -e '/proc/'.$proc->{pid}.'/wchan') {
@@ -266,14 +280,14 @@ sub run{
 			} else {
 				$info=$info.$proc->{wchan};
 			}
-			$info=$info.' '.color('reset');
+			$info=$info.color('reset');
 			# finally actually add it to the new new line array
 			push( @new_line,  $info );
 
 			#
 			# handles the start column
 			#
-			push( @new_line, color('bright_yellow').$self->startString( $proc->{start} ).color('reset') );
+			push( @new_line, color($self->nextColor).$self->startString( $proc->{start} ).color('reset') );
 
 			#
 			# handles the time column
@@ -283,7 +297,7 @@ sub run{
 			#
 			# handle the command
 			#
-			my $command=color('bright_red');
+			my $command=color($self->{processColor});
 			if ( $proc->{cmndline} =~ /^$/ ) {
 				$command=$command.'['.$proc->{fname}.']';
 			} else {
@@ -291,8 +305,8 @@ sub run{
 			}
 			push( @new_line, $command.color('reset') );
 
-			#$tb->add_row( \@new_line );
 			push( @td, \@new_line );
+			$self->{nextColor}=0;
 		}
 	}
 
@@ -345,13 +359,6 @@ sub timeString{
         my $self=$_[0];
         my $time=$_[1];
 
-        my $colors=[
-					'GREEN',
-					'BRIGHT_GREEN',
-					'RED',
-					'BRIGHT_RED'
-					];
-
         my $hours=0;
         if ( $time >= 3600 ){
                 $hours = $time / 3600;
@@ -377,9 +384,9 @@ sub timeString{
         }elsif(
                 $hours >= 10
                 ){
-                $toReturn=color($colors->[3]).$hours.':';
+                $toReturn=color($self->{timeColors}->[3]).$hours.':';
         }else{
-                $toReturn=color($colors->[2]).$hours.':';
+                $toReturn=color($self->{timeColors}->[2]).$hours.':';
         }
 
         #process the minutes bit
@@ -387,12 +394,35 @@ sub timeString{
                 ( $hours > 0 ) ||
                 ( $minutes > 0 )
                 ){
-                $toReturn=$toReturn.color( $colors->[1] ). $minutes.':';
+                $toReturn=$toReturn.color( $self->{timeColors}->[1] ). $minutes.':';
         }
 
-        $toReturn=$toReturn.color( $colors->[0] ).$seconds.color('reset');
+        $toReturn=$toReturn.color( $self->{timeColors}->[0] ).$seconds.color('reset');
 
         return $toReturn;
+}
+
+=head2 nextColor
+
+Returns the next color.
+
+=cut
+
+sub nextColor{
+	my $self=$_[0];
+
+	my $color;
+
+	if ( defined( $self->{colors}[ $self->{nextColor} ] ) ) {
+		$color=$self->{colors}[ $self->{nextColor} ];
+		$self->{nextColor}++;
+	} else {
+		$self->{nextColor}=0;
+		$color=$self->{colors}[ $self->{nextColor} ];
+		$self->{nextColor}++;
+	}
+
+	return $color;
 }
 
 
