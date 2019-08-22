@@ -87,6 +87,10 @@ sub new {
 		$self->{cminor_faults}=$args{cminor_faults};
 	}
 
+	if ( defined( $args{numthr} ) ){
+		$self->{numthr}=$args{numthr};
+	}
+
 	return $self;
 }
 
@@ -195,6 +199,12 @@ sub run{
 	# add children minor faults if needed
 	if ( $self->{minor_faults} ){
 		push( @headers, 'cminF' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add children minor faults if needed
+	if ( $self->{numthr} ){
+		push( @headers, 'Thr' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
@@ -404,6 +414,13 @@ sub run{
 			#
 			if ( $self->{cminor_faults} ){
 				push( @new_line, color($self->nextColor).$proc->{cminflt}.color('reset') );
+			}
+
+			#
+			# number of threads
+			#
+			if ( $self->{numthr} ){
+				push( @new_line, color($self->nextColor).$proc->{numthr}.color('reset') );
 			}
 
 			#

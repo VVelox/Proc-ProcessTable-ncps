@@ -26,6 +26,8 @@ sub help{
 
 -F            Show major faults.
 
+-n            Show number of threads.
+
 -p <pctcpu>   CPU usage percent to search for.
 --pi          Invert the CPU usage search.
 
@@ -78,6 +80,7 @@ my $minor_faults=0;
 my $major_faults=0;
 my $cminor_faults=0;
 my $cmajor_faults=0;
+my $numthr=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -110,6 +113,7 @@ GetOptions(
 		   'F' => \$major_faults,
 		   'cf' => \$cminor_faults,
 		   'cF' => \$cmajor_faults,
+		   'n' => \$numthr,
 		   );
 
 # print the version info if requested
@@ -255,6 +259,7 @@ my $args={
 		  cminor_faults=>$cminor_faults,
 		  major_faults=>$major_faults,
 		  minor_faults=>$minor_faults,
+		  numthr=>$numthr,
 		  match=>{
 				  checks=>\@filters,
 				  }
