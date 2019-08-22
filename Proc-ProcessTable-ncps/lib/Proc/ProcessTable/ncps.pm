@@ -71,8 +71,10 @@ sub new {
 		$self->{match}=Proc::ProcessTable::Match->new( $args{match} );
 	}
 
-	my @bool_feed=('major_faults', 'minor_faults', 'cmajor_faults',
-				   'cminor_faults', 'numthr', 'tty');
+	my @bool_feed=(
+				   'major_faults', 'minor_faults', 'cmajor_faults',
+				   'cminor_faults', 'numthr', 'tty', 'jid'
+				   );
 
 	foreach my $feed ( @bool_feed ){
 		$self->{$feed}=$args{$feed};
@@ -198,6 +200,12 @@ sub run{
 	# add children minor faults if needed
 	if ( $self->{tty} ){
 		push( @headers, 'TTY' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add jail ID if needed
+	if ( $self->{jid} ){
+		push( @headers, 'JID' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
@@ -421,6 +429,13 @@ sub run{
 			#
 			if ( $self->{tty} ){
 				push( @new_line, color($self->nextColor).$proc->{ttydev}.color('reset') );
+			}
+
+			#
+			# jail ID
+			#
+			if ( $self->{jid} ){
+				push( @new_line, color($self->nextColor).$proc->{jid}.color('reset') );
 			}
 
 			#

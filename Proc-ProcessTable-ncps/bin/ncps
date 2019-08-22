@@ -26,6 +26,8 @@ sub help{
 
 -F            Show major faults.
 
+-J            Show jail IDs.
+
 -n            Show number of threads.
 
 -p <pctcpu>   CPU usage percent to search for.
@@ -83,7 +85,8 @@ my $major_faults=0;
 my $cminor_faults=0;
 my $cmajor_faults=0;
 my $numthr=0;
-my $tty=0,
+my $tty=0;
+my $jid=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -118,6 +121,7 @@ GetOptions(
 		   'cF' => \$cmajor_faults,
 		   'n' => \$numthr,
 		   'tty' => \$tty,
+		   'J' => \$jid,
 		   );
 
 # print the version info if requested
@@ -265,6 +269,7 @@ my $args={
 		  minor_faults=>$minor_faults,
 		  numthr=>$numthr,
 		  tty=>$tty,
+		  'jid'=>$jid,
 		  match=>{
 				  checks=>\@filters,
 				  }

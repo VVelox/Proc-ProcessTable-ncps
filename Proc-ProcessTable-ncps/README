@@ -1,16 +1,11 @@
 Proc-ProcessTable-ncps
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+A enhanced version of ps that adjanced searching capabilities
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
-
+>ncps -c ldap -F -f
+User    PID   %CPU %MEM VSZ       RSS      Info     Nic Pri MajF minF Start    Time Command                                  
+kitsune 21031 0.0  0.05 28536832  18235392 Rs+      0   172 0    3187 18:01     0   perl /usr/local/bin/ncps -c ldap -F -f   
+ldap    1379  0.0  0.03 194584576 11145216 SL uwait 0   172 20   4917 21-08:50 1:15 /usr/local/libexec/slapd -u ldap -g ldap 
 
 INSTALLATION
 
