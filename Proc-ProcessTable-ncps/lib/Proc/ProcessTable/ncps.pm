@@ -96,6 +96,24 @@ sub run{
 		$procs=$pt;
 	}
 
+	# figures out if this systems reports nice or not
+	my $have_nice=0;
+	if (
+		defined( $procs->[0] ) &&
+		defined($procs->[0]->{nice} )
+		){
+		$have_nice=1;
+	}
+
+	# figures out if this systems reports priority or not
+	my $have_pri=0;
+	if (
+		defined( $procs->[0] ) &&
+		defined($procs->[0]->{priority} )
+		){
+		$have_pri=1;
+	}
+	
 	my $physmem;
 	if ( $^O =~ /bsd/ ){
 		$physmem=`/sbin/sysctl -a hw.physmem`;
@@ -107,8 +125,12 @@ sub run{
 	$tb->border_style('Default::none_ascii');  # if not, a nice default is picked
 	$tb->color_theme('Default::no_color');  # if not, a nice default is picked
 
+	#
+	# assemble the headers
+	#
 	my @headers;
 	my $header_int=0;
+	my $padding=0;
 	push( @headers, 'User' );
 	$tb->set_column_style($header_int, pad => 0); $header_int++;
 	push( @headers, 'PID' );
@@ -122,13 +144,29 @@ sub run{
 	push( @headers, 'RSS' );
 	$tb->set_column_style($header_int, pad => 0); $header_int++;
 	push( @headers, 'Info' );
-	$tb->set_column_style($header_int, pad => 1); $header_int++;
+	# add
+	if ( $have_nice ){
+		push( @headers, 'Nic' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add
+	if ( $have_pri ){
+		push( @headers, 'Pri' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	push( @headers, 'Start' );
-	$tb->set_column_style($header_int, pad => 0); $header_int++;
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	push( @headers, 'Time' );
-	$tb->set_column_style($header_int, pad => 1); $header_int++;
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	push( @headers, 'Command' );
-	$tb->set_column_style($header_int, pad => 1, formats=>[[wrap => {ansi=>1, mb=>1}]]);
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding, formats=>[[wrap => {ansi=>1, mb=>1}]]);
 
 	$tb->columns( \@headers );
 
@@ -283,6 +321,20 @@ sub run{
 			$info=$info.color('reset');
 			# finally actually add it to the new new line array
 			push( @new_line,  $info );
+
+			#
+			# handle the nice column
+			#
+			if ( $have_nice ){
+				push( @new_line, color($self->nextColor).$proc->{nice}.color('reset') );
+			}
+
+			#
+			# handle the priority column
+			#
+			if ( $have_pri ){
+				push( @new_line, color($self->nextColor).$proc->{priority}.color('reset') );
+			}
 
 			#
 			# handles the start column
