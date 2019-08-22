@@ -79,6 +79,14 @@ sub new {
 		$self->{minor_faults}=$args{minor_faults};
 	}
 
+	if ( defined( $args{cmajor_faults} ) ){
+		$self->{cmajor_faults}=$args{cmajor_faults};
+	}
+
+	if ( defined( $args{cminor_faults} ) ){
+		$self->{cminor_faults}=$args{cminor_faults};
+	}
+
 	return $self;
 }
 
@@ -175,6 +183,18 @@ sub run{
 	# add minor faults if needed
 	if ( $self->{minor_faults} ){
 		push( @headers, 'minF' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add children major faults if needed
+	if ( $self->{cmajor_faults} ){
+		push( @headers, 'cMajF' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add children minor faults if needed
+	if ( $self->{minor_faults} ){
+		push( @headers, 'cminF' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
@@ -370,6 +390,20 @@ sub run{
 			#
 			if ( $self->{minor_faults} ){
 				push( @new_line, color($self->nextColor).$proc->{minflt}.color('reset') );
+			}
+
+			#
+			# children major faults
+			#
+			if ( $self->{cmajor_faults} ){
+				push( @new_line, color($self->nextColor).$proc->{cmajflt}.color('reset') );
+			}
+
+			#
+			# children major faults
+			#
+			if ( $self->{cminor_faults} ){
+				push( @new_line, color($self->nextColor).$proc->{cminflt}.color('reset') );
 			}
 
 			#

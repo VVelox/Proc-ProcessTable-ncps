@@ -15,6 +15,10 @@ sub help{
 -c <regex>    Search procs using the matching regex.
 --ci          Invert the command search.
 
+--cf          Show children minor faults.
+
+--cF          Show children major faults.
+
 -m <pctmem>   Memory usage percent to search for.
 --mi          Invert the memory usage search.
 
@@ -72,6 +76,8 @@ my $states_string;
 my $states_invert=0;
 my $minor_faults=0;
 my $major_faults=0;
+my $cminor_faults=0;
+my $cmajor_faults=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -102,6 +108,8 @@ GetOptions(
 		   'sti' => \$states_invert,
 		   'f' => \$minor_faults,
 		   'F' => \$major_faults,
+		   'cf' => \$cminor_faults,
+		   'cF' => \$cmajor_faults,
 		   );
 
 # print the version info if requested
@@ -243,6 +251,8 @@ if ( defined( $states_string ) ){
 
 my $args={
 		  invert=>0,
+		  cmajor_faults=>$cmajor_faults,
+		  cminor_faults=>$cminor_faults,
 		  major_faults=>$major_faults,
 		  minor_faults=>$minor_faults,
 		  match=>{
