@@ -46,6 +46,8 @@ sub help{
 -t <times>    A comma seperated value of time, in seconds, to search for.
 --ti          Invert the time search.
 
+--tty         Show TTYs.
+
 -w <wchans>   A string search for wait channels.
 --wi          Invert the wait channel search.
 
@@ -81,6 +83,7 @@ my $major_faults=0;
 my $cminor_faults=0;
 my $cmajor_faults=0;
 my $numthr=0;
+my $tty=0,
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -114,6 +117,7 @@ GetOptions(
 		   'cf' => \$cminor_faults,
 		   'cF' => \$cmajor_faults,
 		   'n' => \$numthr,
+		   'tty' => \$tty,
 		   );
 
 # print the version info if requested
@@ -260,6 +264,7 @@ my $args={
 		  major_faults=>$major_faults,
 		  minor_faults=>$minor_faults,
 		  numthr=>$numthr,
+		  tty=>$tty,
 		  match=>{
 				  checks=>\@filters,
 				  }

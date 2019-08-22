@@ -71,24 +71,11 @@ sub new {
 		$self->{match}=Proc::ProcessTable::Match->new( $args{match} );
 	}
 
-	if ( defined( $args{major_faults} ) ){
-		$self->{major_faults}=$args{major_faults};
-	}
+	my @bool_feed=('major_faults', 'minor_faults', 'cmajor_faults',
+				   'cminor_faults', 'numthr', 'tty');
 
-	if ( defined( $args{minor_faults} ) ){
-		$self->{minor_faults}=$args{minor_faults};
-	}
-
-	if ( defined( $args{cmajor_faults} ) ){
-		$self->{cmajor_faults}=$args{cmajor_faults};
-	}
-
-	if ( defined( $args{cminor_faults} ) ){
-		$self->{cminor_faults}=$args{cminor_faults};
-	}
-
-	if ( defined( $args{numthr} ) ){
-		$self->{numthr}=$args{numthr};
+	foreach my $feed ( @bool_feed ){
+		$self->{$feed}=$args{$feed};
 	}
 
 	return $self;
@@ -197,7 +184,7 @@ sub run{
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
 	# add children minor faults if needed
-	if ( $self->{minor_faults} ){
+	if ( $self->{cminor_faults} ){
 		push( @headers, 'cminF' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
@@ -205,6 +192,12 @@ sub run{
 	# add children minor faults if needed
 	if ( $self->{numthr} ){
 		push( @headers, 'Thr' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add children minor faults if needed
+	if ( $self->{tty} ){
+		push( @headers, 'TTY' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
@@ -421,6 +414,13 @@ sub run{
 			#
 			if ( $self->{numthr} ){
 				push( @new_line, color($self->nextColor).$proc->{numthr}.color('reset') );
+			}
+
+			#
+			# number of threads
+			#
+			if ( $self->{tty} ){
+				push( @new_line, color($self->nextColor).$proc->{ttydev}.color('reset') );
 			}
 
 			#
