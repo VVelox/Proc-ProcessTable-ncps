@@ -30,6 +30,8 @@ sub help{
 
 -n            Show number of threads.
 
+--nc          disable color.
+
 -p <pctcpu>   CPU usage percent to search for.
 --pi          Invert the CPU usage search.
 
@@ -63,6 +65,7 @@ my $wait_channels_string;
 my $wait_channels_invert=0;
 my $zombie=0,
 my $swapped=0,
+my $no_color=0;
 my $swapped_invert=0;
 my $version;
 my $help;
@@ -122,6 +125,7 @@ GetOptions(
 		   'n' => \$numthr,
 		   'tty' => \$tty,
 		   'J' => \$jid,
+		   'nc' => \$no_color,
 		   );
 
 # print the version info if requested
@@ -247,6 +251,42 @@ if ( defined( $time_string ) ){
 					 });
 }
 
+# XOR common boolean CLI flags
+if ( defined( $ENV{NCPS_jid} ) ){
+	$jid = $jid ^ 1;
+}
+if ( defined( $ENV{NCPS_numthr} ) ){
+	$numthr = $numthr ^ 1;
+}
+if ( defined( $ENV{NCPS_cmajflt} ) ){
+	$cmajor_faults = $cmajor_faults ^ 1;
+}
+if ( defined( $ENV{NCPS_majflt} ) ){
+	$major_faults = $major_faults ^ 1;
+}
+if ( defined( $ENV{NCPS_cminflt} ) ){
+	$cminor_faults = $cminor_faults ^ 1;
+}
+if ( defined( $ENV{NCPS_majflt} ) ){
+	$minor_faults = $minor_faults ^ 1;
+}
+if ( defined( $ENV{NCPS_tty} ) ){
+	$tty = $tty ^ 1;
+}
+#if ( defined( $ENV{NCPS_inverted} ) ){
+# no invert support really yet
+#}
+
+# xor --nc if needed
+if ( defined( $ENV{NO_COLOR} ) ){
+        $no_color = $no_color ^ 1;
+}
+# disable the color if requested
+if ( $no_color ){
+        $ENV{ANSI_COLORS_DISABLED}=1;
+}
+
+
 #
 # handles the time search
 #
@@ -269,7 +309,7 @@ my $args={
 		  minor_faults=>$minor_faults,
 		  numthr=>$numthr,
 		  tty=>$tty,
-		  'jid'=>$jid,
+		  jid=>$jid,
 		  match=>{
 				  checks=>\@filters,
 				  }
