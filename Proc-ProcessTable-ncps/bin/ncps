@@ -18,6 +18,10 @@ sub help{
 -m <pctmem>   Memory usage percent to search for.
 --mi          Invert the memory usage search.
 
+-f            Show minor faults.
+
+-F            Show major faults.
+
 -p <pctcpu>   CPU usage percent to search for.
 --pi          Invert the CPU usage search.
 
@@ -66,6 +70,8 @@ my $time_string;
 my $time_invert=0;
 my $states_string;
 my $states_invert=0;
+my $minor_faults=0;
+my $major_faults=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -94,6 +100,8 @@ GetOptions(
 		   'ti' => \$time_invert,
 		   'st=s' => \$states_string,
 		   'sti' => \$states_invert,
+		   'f' => \$minor_faults,
+		   'F' => \$major_faults,
 		   );
 
 # print the version info if requested
@@ -235,6 +243,8 @@ if ( defined( $states_string ) ){
 
 my $args={
 		  invert=>0,
+		  major_faults=>$major_faults,
+		  minor_faults=>$minor_faults,
 		  match=>{
 				  checks=>\@filters,
 				  }

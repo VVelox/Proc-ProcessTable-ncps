@@ -44,6 +44,8 @@ sub new {
 	my $self = {
 				invert=>0,
 				match=>undef,
+				minor_faults=>0,
+				major_faults=>0,
 				colors=>[
 						 'BRIGHT_YELLOW',
 						 'BRIGHT_CYAN',
@@ -67,6 +69,14 @@ sub new {
 		defined( $args{match}{checks}[0] )
 		){
 		$self->{match}=Proc::ProcessTable::Match->new( $args{match} );
+	}
+
+	if ( defined( $args{major_faults} ) ){
+		$self->{major_faults}=$args{major_faults};
+	}
+
+	if ( defined( $args{minor_faults} ) ){
+		$self->{minor_faults}=$args{minor_faults};
 	}
 
 	return $self;
@@ -144,15 +154,27 @@ sub run{
 	push( @headers, 'RSS' );
 	$tb->set_column_style($header_int, pad => 0); $header_int++;
 	push( @headers, 'Info' );
-	# add
+	# add nice if needed
 	if ( $have_nice ){
 		push( @headers, 'Nic' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
-	# add
+	# add priority if needed
 	if ( $have_pri ){
 		push( @headers, 'Pri' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add major faults if needed
+	if ( $self->{major_faults} ){
+		push( @headers, 'MajF' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add minor faults if needed
+	if ( $self->{minor_faults} ){
+		push( @headers, 'minF' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
@@ -334,6 +356,20 @@ sub run{
 			#
 			if ( $have_pri ){
 				push( @new_line, color($self->nextColor).$proc->{priority}.color('reset') );
+			}
+
+			#
+			# major faults
+			#
+			if ( $self->{major_faults} ){
+				push( @new_line, color($self->nextColor).$proc->{majflt}.color('reset') );
+			}
+
+			#
+			# major faults
+			#
+			if ( $self->{minor_faults} ){
+				push( @new_line, color($self->nextColor).$proc->{minflt}.color('reset') );
 			}
 
 			#
