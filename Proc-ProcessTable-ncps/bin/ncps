@@ -19,8 +19,11 @@ sub help{
 
 --cF          Show children major faults.
 
---eu          Search for proccs witha EUID set.
---eui         Invert the EUID search.
+--eg          Search for proccs with a EGID set.
+--egi         Invert the EGID set search.
+
+--eu          Search for proccs with a EUID set.
+--eui         Invert the EUID set search.
 
 -f            Show minor faults.
 
