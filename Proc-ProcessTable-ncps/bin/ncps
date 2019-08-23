@@ -57,6 +57,9 @@ sub help{
 -w <wchans>   A string search for wait channels.
 --wi          Invert the wait channel search.
 
+-u <UIDs>     A comma seperated list of UIDs or usernames.
+--ui          Invert the UID/username search.
+
 -z            Show zombies procs.
 
 ';
@@ -94,6 +97,8 @@ my $tty=0;
 my $jid=0;
 my $jids_string;
 my $jids_invert=0;
+my $uids_string;
+my $uids_invert=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -132,6 +137,8 @@ GetOptions(
 		   'nc' => \$no_color,
 		   'j=s' => \$jids_string,
 		   'ji' => \$jids_invert,
+		   'u=s' => \$uids_string,
+		   'ui' => \$uids_invert,
 		   );
 
 # print the version info if requested
@@ -267,6 +274,20 @@ if ( defined( $time_string ) ){
 					 invert=>$time_invert,
 					 args=>{
 							times=>\@times,
+							},
+					 });
+}
+
+#
+# handles the UID/username search
+#
+if ( defined( $uids_string ) ){
+	my @uids=split(/\,/, $uids_string );
+	push( @filters, {
+					 type=>'UID',
+					 invert=>$uids_invert,
+					 args=>{
+							uids=>\@uids,
 							},
 					 });
 }
