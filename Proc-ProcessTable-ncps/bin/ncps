@@ -103,6 +103,9 @@ my $jids_invert=0;
 my $uids_string;
 my $uids_invert=0;
 my $euid=0;
+my $euid_invert=0;
+my $egid=0;
+my $egid_invert=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -144,6 +147,9 @@ GetOptions(
 		   'u=s' => \$uids_string,
 		   'ui' => \$uids_invert,
 		   'eu' => \$euid,
+		   'eui' => \$euid_invert,
+		   'eg' => \$egid,
+		   'egi' => \$egid_invert,
 		   );
 
 # print the version info if requested
@@ -303,7 +309,19 @@ if ( defined( $uids_string ) ){
 if ( $euid ){
 	push( @filters, {
 					 type=>'EUIDset',
-					 invert=>$uids_invert,
+					 invert=>$euid_invert,
+					 args=>{
+							},
+					 });
+}
+
+#
+# handles the EGID set search
+#
+if ( $egid ){
+	push( @filters, {
+					 type=>'EGIDset',
+					 invert=>$egid_invert,
 					 args=>{
 							},
 					 });
