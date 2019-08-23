@@ -124,7 +124,7 @@ sub run{
 		){
 		$have_pri=1;
 	}
-	
+
 	my $physmem;
 	if ( $^O =~ /bsd/ ){
 		$physmem=`/sbin/sysctl -a hw.physmem`;
@@ -146,14 +146,14 @@ sub run{
 	$tb->set_column_style($header_int, pad => 0); $header_int++;
 	push( @headers, 'PID' );
 	$tb->set_column_style($header_int, pad => 1); $header_int++;
-	push( @headers, '%CPU' );
+	push( @headers, 'CPU' );
 	$tb->set_column_style($header_int, pad => 0); $header_int++;
-	push( @headers, '%MEM' );
-	$tb->set_column_style($header_int, pad => 0); $header_int++;
-	push( @headers, 'VSZ' );
+	push( @headers, 'MEM' );
 	$tb->set_column_style($header_int, pad => 1); $header_int++;
-	push( @headers, 'RSS' );
+	push( @headers, 'VSZ' );
 	$tb->set_column_style($header_int, pad => 0); $header_int++;
+	push( @headers, 'RSS' );
+	$tb->set_column_style($header_int, pad => 1); $header_int++;
 	push( @headers, 'Info' );
 	# add nice if needed
 	if ( $have_nice ){
