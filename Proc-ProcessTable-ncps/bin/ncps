@@ -19,8 +19,8 @@ sub help{
 
 --cF          Show children major faults.
 
--m <pctmem>   Memory usage percent to search for.
---mi          Invert the memory usage search.
+--eu          Search for proccs witha EUID set.
+--eui         Invert the EUID search.
 
 -f            Show minor faults.
 
@@ -29,6 +29,9 @@ sub help{
 -J            Show jail IDs.
 -j <jids>     A comma seperated list of JIDs to search for.
 --ji          Invert the JIDs earch.
+
+-m <pctmem>   Memory usage percent to search for.
+--mi          Invert the memory usage search.
 
 -n            Show number of threads.
 
@@ -99,6 +102,7 @@ my $jids_string;
 my $jids_invert=0;
 my $uids_string;
 my $uids_invert=0;
+my $euid=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -139,6 +143,7 @@ GetOptions(
 		   'ji' => \$jids_invert,
 		   'u=s' => \$uids_string,
 		   'ui' => \$uids_invert,
+		   'eu' => \$euid,
 		   );
 
 # print the version info if requested
@@ -288,6 +293,18 @@ if ( defined( $uids_string ) ){
 					 invert=>$uids_invert,
 					 args=>{
 							uids=>\@uids,
+							},
+					 });
+}
+
+#
+# handles the EUID set search
+#
+if ( $euid ){
+	push( @filters, {
+					 type=>'EUIDset',
+					 invert=>$uids_invert,
+					 args=>{
 							},
 					 });
 }
