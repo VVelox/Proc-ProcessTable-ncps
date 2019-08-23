@@ -27,6 +27,8 @@ sub help{
 -F            Show major faults.
 
 -J            Show jail IDs.
+-j <jids>     A comma seperated list of JIDs to search for.
+--ji          Invert the JIDs earch.
 
 -n            Show number of threads.
 
@@ -90,6 +92,8 @@ my $cmajor_faults=0;
 my $numthr=0;
 my $tty=0;
 my $jid=0;
+my $jids_string;
+my $jids_invert=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -126,6 +130,8 @@ GetOptions(
 		   'tty' => \$tty,
 		   'J' => \$jid,
 		   'nc' => \$no_color,
+		   'j=s' => \$jids_string,
+		   'ji' => \$jids_invert,
 		   );
 
 # print the version info if requested
@@ -238,6 +244,20 @@ if ( defined( $rss_string ) ){
 }
 
 #
+# handles the JID search
+#
+if ( defined( $jids_string ) ){
+	my @jids=split(/\,/, $jids_string );
+	push( @filters, {
+					 type=>'JID',
+					 invert=>$jids_invert,
+					 args=>{
+							jids=>\@jids,
+							},
+					 });
+}
+
+#
 # handles the time search
 #
 if ( defined( $time_string ) ){
@@ -285,7 +305,6 @@ if ( defined( $ENV{NO_COLOR} ) ){
 if ( $no_color ){
         $ENV{ANSI_COLORS_DISABLED}=1;
 }
-
 
 #
 # handles the time search
