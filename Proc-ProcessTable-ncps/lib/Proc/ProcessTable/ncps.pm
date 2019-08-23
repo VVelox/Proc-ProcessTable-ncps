@@ -58,6 +58,18 @@ sub new {
 							 'RED',
 							 'BRIGHT_RED'
 							 ],
+				vszColors=>[
+							'GREEN',
+							'YELLOW',
+							'RED',
+							'BRIGHT_BLUE'
+							],
+				rssColors=>[
+							'BRIGHT_GREEN',
+							'BRIGHT_YELLOW',
+							'BRIGHT_RED',
+							'BRIGHT_BLUE'
+							],
 				processColor=>'BRIGHT_RED',
 				nextColor=>0,
 				};
@@ -261,12 +273,12 @@ sub run{
 			#
 			# handles VSZ
 			#
-			push( @new_line,  color($self->nextColor).$proc->{size}.color('reset') );
+			push( @new_line,  $self->memString( $proc->{size}, 'vsz') );
 
 			#
 			# handles the rss
 			#
-			push( @new_line,  color($self->nextColor).$proc->{rss}.color('reset') );
+			push( @new_line, $self->memString( $proc->{rss}, 'rss')  );
 
 			#
 			# handles the info
@@ -555,6 +567,52 @@ sub timeString{
 
         return $toReturn;
 }
+
+=head2 memString
+
+Turns the raw run string into something usable.
+
+=cut
+
+sub memString{
+        my $self=$_[0];
+        my $mem=$_[1];
+		my $type=$_[2];
+
+		my $toReturn='';
+
+		if ( $mem < '10000' ){
+			$toReturn=color( $self->{$type.'Colors'}[0] ).$mem;
+		}elsif(
+			   ( $mem >= '10000' ) &&
+			   ( $mem < '1000000' )
+			   ){
+			$mem=$mem/1000;
+
+			$toReturn=color( $self->{$type.'Colors'}[0] ).$mem.
+			color( $self->{$type.'Colors'}[3] ).'k';
+		}elsif(
+			   ( $mem >= '1000000' ) &&
+			   ( $mem < '1000000000' )
+			   ){
+			$mem=($mem/1000)/1000;
+			$mem=sprintf('%.3f', $mem);
+			my @mem_split=split(/\./, $mem);
+
+			$toReturn=color( $self->{$type.'Colors'}[1] ).$mem_split[0].'.'.color( $self->{$type.'Colors'}[0] ).$mem_split[1].
+			color( $self->{$type.'Colors'}[3] ).'M';
+		}elsif( $mem >= '1000000000' ){
+			$mem=(($mem/1000)/1000)/1000;
+			$mem=sprintf('%.3f', $mem);
+			my @mem_split=split(/\./, $mem);
+
+			$toReturn=color( $self->{$type.'Colors'}[2] ).$mem_split[0].'.'.color( $self->{$type.'Colors'}[1] ).$mem_split[1].
+			color( $self->{$type.'Colors'}[3] ).'G';
+		}
+
+        return $toReturn.color('reset');
+}
+
 
 =head2 nextColor
 
