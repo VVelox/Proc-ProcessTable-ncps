@@ -52,6 +52,8 @@ sub help{
 -s            Show swapped out procs.
 --si          Invert the swapped out search.
 
+--self        Show the the ncps process as well.
+
 --st <states> A comma seperated list of states to search for.
 --sti         Invert the state search.
 
@@ -109,6 +111,7 @@ my $euid=0;
 my $euid_invert=0;
 my $egid=0;
 my $egid_invert=0;
+my $self_proc=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -153,6 +156,7 @@ GetOptions(
 		   'eui' => \$euid_invert,
 		   'eg' => \$egid,
 		   'egi' => \$egid_invert,
+		   'self' => \$self_proc,
 		   );
 
 # print the version info if requested
@@ -352,6 +356,9 @@ if ( defined( $ENV{NCPS_majflt} ) ){
 if ( defined( $ENV{NCPS_tty} ) ){
 	$tty = $tty ^ 1;
 }
+if ( defined( $ENV{NCPS_self} ) ){
+	$self_proc = $self_proc ^ 1;
+}
 #if ( defined( $ENV{NCPS_inverted} ) ){
 # no invert support really yet
 #}
@@ -363,6 +370,19 @@ if ( defined( $ENV{NO_COLOR} ) ){
 # disable the color if requested
 if ( $no_color ){
         $ENV{ANSI_COLORS_DISABLED}=1;
+}
+
+#
+# handles the self proc flag
+#
+if ( ! $self_proc ){
+	push( @filters, {
+					 type=>'PID',
+					 invert=>1,
+					 args=>{
+							pids=>[$$],
+							},
+					 });
 }
 
 #
