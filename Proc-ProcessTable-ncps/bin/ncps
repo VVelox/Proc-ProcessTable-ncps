@@ -33,6 +33,8 @@ sub help{
 -j <jids>     A comma seperated list of JIDs to search for.
 --ji          Invert the JIDs earch.
 
+--idle        Show the idle kernel process.
+
 -m <pctmem>   Memory usage percent to search for.
 --mi          Invert the memory usage search.
 
