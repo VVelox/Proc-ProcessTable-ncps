@@ -112,6 +112,7 @@ my $euid_invert=0;
 my $egid=0;
 my $egid_invert=0;
 my $self_proc=0;
+my $idle=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -157,6 +158,7 @@ GetOptions(
 		   'eg' => \$egid,
 		   'egi' => \$egid_invert,
 		   'self' => \$self_proc,
+		   'idle' => \$idle,
 		   );
 
 # print the version info if requested
@@ -359,6 +361,9 @@ if ( defined( $ENV{NCPS_tty} ) ){
 if ( defined( $ENV{NCPS_self} ) ){
 	$self_proc = $self_proc ^ 1;
 }
+if ( defined( $ENV{NCPS_idle} ) ){
+	$idle = $idle ^ 1;
+}
 #if ( defined( $ENV{NCPS_inverted} ) ){
 # no invert support really yet
 #}
@@ -381,6 +386,18 @@ if ( ! $self_proc ){
 					 invert=>1,
 					 args=>{
 							pids=>[$$],
+							},
+					 });
+}
+
+#
+# handles the self proc flag
+#
+if ( ! $idle ){
+	push( @filters, {
+					 type=>'Idle',
+					 invert=>1,
+					 args=>{
 							},
 					 });
 }

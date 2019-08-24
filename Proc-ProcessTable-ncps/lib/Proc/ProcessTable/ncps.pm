@@ -237,243 +237,241 @@ sub run{
 
 	my @td;
 	foreach my $proc ( @{ $procs } ) {
-		if ( $proc->{fname} !~ /^idle$/ ) {
-			my @new_line;
+		my @new_line;
 
-			#
-			# handle username column
-			#
-			my $user=getpwuid($proc->{uid});
-			if ( ! defined( $user ) ) {
-				$user=$proc->{uid};
-			}
-			$user=color($self->nextColor).$user.color('reset');
-			push( @new_line, $user );
-
-			#
-			# handles the PID
-			#
-			push( @new_line,  color($self->nextColor).$proc->{pid}.color('reset') );
-
-			#
-			# handles the %CPU
-			#
-			push( @new_line,  color($self->nextColor).$proc->{pctcpu}.color('reset') );
-
-			#
-			# handles the %MEM
-			#
-			if ( $^O =~ /bsd/ ) {
-				my $mem=(($proc->{rssize} * 1024 * 4 ) / $physmem) * 100;
-				push( @new_line,  color($self->nextColor).sprintf('%.2f', $mem).color('reset') );
-			} else {
-				push( @new_line,  color($self->nextColor).sprintf('%.2f', $proc->{pctcpu}).color('reset') );
-			}
-
-			#
-			# handles VSZ
-			#
-			push( @new_line,  $self->memString( $proc->{size}, 'vsz') );
-
-			#
-			# handles the rss
-			#
-			push( @new_line, $self->memString( $proc->{rss}, 'rss')  );
-
-			#
-			# handles the info
-			#
-			my $info;
-			my %flags;
-			$flags{is_session_leader}=0;
-			$flags{is_being_forked}=0;
-			$flags{working_on_exiting}=0;
-			$flags{has_controlling_terminal}=0;
-			$flags{is_locked}=0;
-			$flags{traced_by_debugger}=0;
-			$flags{is_stopped}=0;
-			$flags{posix_advisory_lock}=0;
-			# parses the flags for freebsd
-			if ( $^O =~ /freebsd/ ) {
-				if ( hex($proc->flags) & 0x00002 ) {
-					$flags{controlling_tty_active}=1;
-				}
-				if ( hex($proc->flags) & 0x00000002 ) {
-					$flags{is_session_leader}=1;
-				}
-				#if ( hex($proc->flags) &  ){$flags{is_being_forked}=1; }
-				if ( hex($proc->flags) & 0x02000 ) {
-					$flags{working_on_exiting}=1;
-				}
-				if ( hex($proc->flags) & 0x00002 ) {
-					$flags{has_controlling_terminal}=1;
-				}
-				if ( hex($proc->flags) & 0x00000004 ) {
-					$flags{is_locked}=1;
-				}
-				if ( hex($proc->flags) & 0x00800 ) {
-					$flags{traced_by_debugger}=1;
-				}
-				if ( hex($proc->flags) & 0x00001 ) {
-					$flags{posix_advisory_lock}=1;
-				}
-			}
-			# get the state
-			$info=$proc->{state};
-			if (
-				$info eq 'sleep'
-				) {
-				$info='S';
-			} elsif (
-					 $info eq 'zombie'
-					 ) {
-				$info='Z';
-			} elsif (
-					 $info eq 'wait'
-					 ) {
-				$info='W';
-			} elsif (
-					 $info eq 'run'
-					 ) {
-				$info='R';
-			}
-			$info=color($self->nextColor).$info;
-			#checks if it is swapped out
-			if (
-				( $proc->{state} ne 'zombie' ) &&
-				( $proc->{rss} == '0' )
-				) {
-				$info=$info.'O';
-			}
-			#handles the various flags
-			if ( $flags{working_on_exiting} ) {
-				$info=$info.'E';
-			}
-			;
-			if ( $flags{is_session_leader} ) {
-				$info=$info.'s';
-			}
-			;
-			if ( $flags{is_locked} || $flags{posix_advisory_lock} ) {
-				$info=$info.'L';
-			}
-			;
-			if ( $flags{has_controlling_terminal} ) {
-				$info=$info.'+';
-			}
-			;
-			if ( $flags{is_being_forked} ) {
-				$info=$info.'F';
-			}
-			;
-			if ( $flags{traced_by_debugger} ) {
-				$info=$info.'X';
-			}
-			;
-			# adds the wchan
-			$info=$info.' '.color($self->nextColor);
-			if ( $^O =~ /linux/ ) {
-				my $wchan='';
-				if ( -e '/proc/'.$proc->{pid}.'/wchan') {
-					open( my $wchan_fh, '<', '/proc/'.$proc->{pid}.'/wchan' );
-					$wchan=readline( $wchan_fh );
-					close( $wchan_fh );
-				}
-				$info=$info.$wchan;
-			} else {
-				$info=$info.$proc->{wchan};
-			}
-			$info=$info.color('reset');
-			# finally actually add it to the new new line array
-			push( @new_line,  $info );
-
-			#
-			# handle the nice column
-			#
-			if ( $have_nice ){
-				push( @new_line, color($self->nextColor).$proc->{nice}.color('reset') );
-			}
-
-			#
-			# handle the priority column
-			#
-			if ( $have_pri ){
-				push( @new_line, color($self->nextColor).$proc->{priority}.color('reset') );
-			}
-
-			#
-			# major faults
-			#
-			if ( $self->{major_faults} ){
-				push( @new_line, color($self->nextColor).$proc->{majflt}.color('reset') );
-			}
-
-			#
-			# major faults
-			#
-			if ( $self->{minor_faults} ){
-				push( @new_line, color($self->nextColor).$proc->{minflt}.color('reset') );
-			}
-
-			#
-			# children major faults
-			#
-			if ( $self->{cmajor_faults} ){
-				push( @new_line, color($self->nextColor).$proc->{cmajflt}.color('reset') );
-			}
-
-			#
-			# children major faults
-			#
-			if ( $self->{cminor_faults} ){
-				push( @new_line, color($self->nextColor).$proc->{cminflt}.color('reset') );
-			}
-
-			#
-			# number of threads
-			#
-			if ( $self->{numthr} ){
-				push( @new_line, color($self->nextColor).$proc->{numthr}.color('reset') );
-			}
-
-			#
-			# number of threads
-			#
-			if ( $self->{tty} ){
-				push( @new_line, color($self->nextColor).$proc->{ttydev}.color('reset') );
-			}
-
-			#
-			# jail ID
-			#
-			if ( $self->{jid} ){
-				push( @new_line, color($self->nextColor).$proc->{jid}.color('reset') );
-			}
-
-			#
-			# handles the start column
-			#
-			push( @new_line, color($self->nextColor).$self->startString( $proc->{start} ).color('reset') );
-
-			#
-			# handles the time column
-			#
-			push( @new_line,  $self->timeString( $proc->{time} ) );
-
-			#
-			# handle the command
-			#
-			my $command=color($self->{processColor});
-			if ( $proc->{cmndline} =~ /^$/ ) {
-				$command=$command.'['.$proc->{fname}.']';
-			} else {
-				$command=$command.$proc->{cmndline};
-			}
-			push( @new_line, $command.color('reset') );
-
-			push( @td, \@new_line );
-			$self->{nextColor}=0;
+		#
+		# handle username column
+		#
+		my $user=getpwuid($proc->{uid});
+		if ( ! defined( $user ) ) {
+			$user=$proc->{uid};
 		}
+		$user=color($self->nextColor).$user.color('reset');
+		push( @new_line, $user );
+
+		#
+		# handles the PID
+		#
+		push( @new_line,  color($self->nextColor).$proc->{pid}.color('reset') );
+
+		#
+		# handles the %CPU
+		#
+		push( @new_line,  color($self->nextColor).$proc->{pctcpu}.color('reset') );
+
+		#
+		# handles the %MEM
+		#
+		if ( $^O =~ /bsd/ ) {
+			my $mem=(($proc->{rssize} * 1024 * 4 ) / $physmem) * 100;
+			push( @new_line,  color($self->nextColor).sprintf('%.2f', $mem).color('reset') );
+		} else {
+			push( @new_line,  color($self->nextColor).sprintf('%.2f', $proc->{pctcpu}).color('reset') );
+		}
+
+		#
+		# handles VSZ
+		#
+		push( @new_line,  $self->memString( $proc->{size}, 'vsz') );
+
+		#
+		# handles the rss
+		#
+		push( @new_line, $self->memString( $proc->{rss}, 'rss')  );
+
+		#
+		# handles the info
+		#
+		my $info;
+		my %flags;
+		$flags{is_session_leader}=0;
+		$flags{is_being_forked}=0;
+		$flags{working_on_exiting}=0;
+		$flags{has_controlling_terminal}=0;
+		$flags{is_locked}=0;
+		$flags{traced_by_debugger}=0;
+		$flags{is_stopped}=0;
+		$flags{posix_advisory_lock}=0;
+		# parses the flags for freebsd
+		if ( $^O =~ /freebsd/ ) {
+			if ( hex($proc->flags) & 0x00002 ) {
+				$flags{controlling_tty_active}=1;
+			}
+			if ( hex($proc->flags) & 0x00000002 ) {
+				$flags{is_session_leader}=1;
+			}
+			#if ( hex($proc->flags) &  ){$flags{is_being_forked}=1; }
+			if ( hex($proc->flags) & 0x02000 ) {
+				$flags{working_on_exiting}=1;
+			}
+			if ( hex($proc->flags) & 0x00002 ) {
+				$flags{has_controlling_terminal}=1;
+			}
+			if ( hex($proc->flags) & 0x00000004 ) {
+				$flags{is_locked}=1;
+			}
+			if ( hex($proc->flags) & 0x00800 ) {
+				$flags{traced_by_debugger}=1;
+			}
+			if ( hex($proc->flags) & 0x00001 ) {
+				$flags{posix_advisory_lock}=1;
+			}
+		}
+		# get the state
+		$info=$proc->{state};
+		if (
+			$info eq 'sleep'
+			) {
+			$info='S';
+		} elsif (
+				 $info eq 'zombie'
+				 ) {
+			$info='Z';
+		} elsif (
+				 $info eq 'wait'
+				 ) {
+			$info='W';
+		} elsif (
+				 $info eq 'run'
+				 ) {
+			$info='R';
+		}
+		$info=color($self->nextColor).$info;
+		#checks if it is swapped out
+		if (
+			( $proc->{state} ne 'zombie' ) &&
+			( $proc->{rss} == '0' )
+			) {
+			$info=$info.'O';
+		}
+		#handles the various flags
+		if ( $flags{working_on_exiting} ) {
+			$info=$info.'E';
+		}
+		;
+		if ( $flags{is_session_leader} ) {
+			$info=$info.'s';
+		}
+		;
+		if ( $flags{is_locked} || $flags{posix_advisory_lock} ) {
+			$info=$info.'L';
+		}
+		;
+		if ( $flags{has_controlling_terminal} ) {
+			$info=$info.'+';
+		}
+		;
+		if ( $flags{is_being_forked} ) {
+			$info=$info.'F';
+		}
+		;
+		if ( $flags{traced_by_debugger} ) {
+			$info=$info.'X';
+		}
+		;
+		# adds the wchan
+		$info=$info.' '.color($self->nextColor);
+		if ( $^O =~ /linux/ ) {
+			my $wchan='';
+			if ( -e '/proc/'.$proc->{pid}.'/wchan') {
+				open( my $wchan_fh, '<', '/proc/'.$proc->{pid}.'/wchan' );
+				$wchan=readline( $wchan_fh );
+				close( $wchan_fh );
+			}
+			$info=$info.$wchan;
+		} else {
+			$info=$info.$proc->{wchan};
+		}
+		$info=$info.color('reset');
+		# finally actually add it to the new new line array
+		push( @new_line,  $info );
+
+		#
+		# handle the nice column
+		#
+		if ( $have_nice ) {
+			push( @new_line, color($self->nextColor).$proc->{nice}.color('reset') );
+		}
+
+		#
+		# handle the priority column
+		#
+		if ( $have_pri ) {
+			push( @new_line, color($self->nextColor).$proc->{priority}.color('reset') );
+		}
+
+		#
+		# major faults
+		#
+		if ( $self->{major_faults} ) {
+			push( @new_line, color($self->nextColor).$proc->{majflt}.color('reset') );
+		}
+
+		#
+		# major faults
+		#
+		if ( $self->{minor_faults} ) {
+			push( @new_line, color($self->nextColor).$proc->{minflt}.color('reset') );
+		}
+
+		#
+		# children major faults
+		#
+		if ( $self->{cmajor_faults} ) {
+			push( @new_line, color($self->nextColor).$proc->{cmajflt}.color('reset') );
+		}
+
+		#
+		# children major faults
+		#
+		if ( $self->{cminor_faults} ) {
+			push( @new_line, color($self->nextColor).$proc->{cminflt}.color('reset') );
+		}
+
+		#
+		# number of threads
+		#
+		if ( $self->{numthr} ) {
+			push( @new_line, color($self->nextColor).$proc->{numthr}.color('reset') );
+		}
+
+		#
+		# number of threads
+		#
+		if ( $self->{tty} ) {
+			push( @new_line, color($self->nextColor).$proc->{ttydev}.color('reset') );
+		}
+
+		#
+		# jail ID
+		#
+		if ( $self->{jid} ) {
+			push( @new_line, color($self->nextColor).$proc->{jid}.color('reset') );
+		}
+
+		#
+		# handles the start column
+		#
+		push( @new_line, color($self->nextColor).$self->startString( $proc->{start} ).color('reset') );
+
+		#
+		# handles the time column
+		#
+		push( @new_line,  $self->timeString( $proc->{time} ) );
+
+		#
+		# handle the command
+		#
+		my $command=color($self->{processColor});
+		if ( $proc->{cmndline} =~ /^$/ ) {
+			$command=$command.'['.$proc->{fname}.']';
+		} else {
+			$command=$command.$proc->{cmndline};
+		}
+		push( @new_line, $command.color('reset') );
+
+		push( @td, \@new_line );
+		$self->{nextColor}=0;
 	}
 
 	$tb->add_rows( \@td );
