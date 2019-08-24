@@ -59,6 +59,8 @@ sub help{
 --st <states> A comma seperated list of states to search for.
 --sti         Invert the state search.
 
+--stats       Print some general states about CPU usage and memory usage.
+
 -t <times>    A comma seperated value of time, in seconds, to search for.
 --ti          Invert the time search.
 
@@ -115,6 +117,7 @@ my $egid=0;
 my $egid_invert=0;
 my $self_proc=0;
 my $idle=0;
+my $stats=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -161,6 +164,7 @@ GetOptions(
 		   'egi' => \$egid_invert,
 		   'self' => \$self_proc,
 		   'idle' => \$idle,
+		   'stats' => \$stats,
 		   );
 
 # print the version info if requested
@@ -427,6 +431,7 @@ my $args={
 		  numthr=>$numthr,
 		  tty=>$tty,
 		  jid=>$jid,
+		  stats=>$stats,
 		  match=>{
 				  checks=>\@filters,
 				  }
