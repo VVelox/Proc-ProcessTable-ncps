@@ -35,6 +35,9 @@ sub help{
 
 --idle        Show the idle kernel process.
 
+--kern        Searches for kernel processes.
+--kerni       Invert the kernel process search.
+
 -m <pctmem>   Memory usage percent to search for.
 --mi          Invert the memory usage search.
 
@@ -118,6 +121,8 @@ my $egid_invert=0;
 my $self_proc=0;
 my $idle=0;
 my $stats=0;
+my $kern=0;
+my $kern_invert=0;
 
 # get the commandline options
 Getopt::Long::Configure ('no_ignore_case');
@@ -165,6 +170,8 @@ GetOptions(
 		   'self' => \$self_proc,
 		   'idle' => \$idle,
 		   'stats' => \$stats,
+		   'kern' => \$kern,
+		   'kerni' => \$kern_invert,
 		   );
 
 # print the version info if requested
@@ -314,6 +321,18 @@ if ( defined( $uids_string ) ){
 					 invert=>$uids_invert,
 					 args=>{
 							uids=>\@uids,
+							},
+					 });
+}
+
+#
+# handles the kernel process search
+#
+if ( $kern ){
+	push( @filters, {
+					 type=>'KernProc',
+					 invert=>$kern_invert,
+					 args=>{
 							},
 					 });
 }
