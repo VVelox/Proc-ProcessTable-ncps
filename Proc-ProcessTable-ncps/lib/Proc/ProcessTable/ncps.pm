@@ -27,12 +27,80 @@ our $VERSION = '0.0.0';
 
     use Proc::ProcessTable::ncps;
 
-    my $ncps = Proc::ProcessTable::ncps->new();
-    ...
+    my $args={
+                  cmajor_faults=>0,
+                  cminor_faults=>0,
+                  major_faults=>1,
+                  minor_faults=>0,
+                  numthr=>0,
+                  tty=>0,
+                  jid=>0,
+                  stats=>1,
+                  match=>{
+                          checks=>\@filters,
+                         }
+                  };
+
+
+    my $ncps = Proc::ProcessTable::ncps->new( \%args );
+
+    print $ncps->run
 
 =head1 METHODS
 
 =head2 new
+
+This initiates the object.
+
+=head3 args hash ref
+
+=head4 match
+
+This is a hash to pash to L<Proc::ProcessTable::Match>. If not specified,
+this it will not be used all processes will be displayed.
+
+=head4 cmajor_faults
+
+Boolean for if the children major faults column should be shown.
+
+Default: 0
+
+=head4 cminor_faults
+
+Boolean for if the children minor faults column should be shown.
+
+Default: 0
+
+=head4 major_faults
+
+Boolean for if the major faults column should be shown.
+
+Default: 0
+
+=head4 minor_faults
+
+Boolean for if the minor faults column should be shown.
+
+Default: 0
+
+=head4 jid
+
+Boolean for if the JIDs column should be shown.
+
+Default: 0
+
+=head4 stats
+
+Boolean for if stats for PctCPU, PctMem, VSZ, RSS
+and time should be shown at the end.
+
+Default: 0
+
+=head4 tty
+
+Boolean for if the TTY column should be shown.
+
+Default: 0
 
 =cut
 
@@ -104,6 +172,12 @@ sub new {
 }
 
 =head2 run
+
+This runs it.
+
+The return value is a string.
+
+    print $ncps->run
 
 =cut
 

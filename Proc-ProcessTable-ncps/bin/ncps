@@ -80,6 +80,16 @@ sub help{
 
 -z            Show zombies procs.
 
+
+For the various switches above that can take numeric values,
+the equalities below can be used, by directly prepending them to
+the number.
+<
+<=
+>
+>=
+!
+
 ';
 }
 
