@@ -7,6 +7,8 @@ use Proc::ProcessTable::Match;
 use Proc::ProcessTable;
 use Text::ANSITable;
 use Term::ANSIColor;
+use Statistics::Basic qw(:all);
+use List::Util qw( min max sum );
 
 =head1 NAME
 
@@ -46,6 +48,8 @@ sub new {
 				match=>undef,
 				minor_faults=>0,
 				major_faults=>0,
+				cminor_faults=>0,
+				cmajor_faults=>0,
 				colors=>[
 						 'BRIGHT_YELLOW',
 						 'BRIGHT_CYAN',
@@ -72,6 +76,10 @@ sub new {
 							],
 				processColor=>'BRIGHT_RED',
 				nextColor=>0,
+				stats=>0,
+				jid=>0,
+				tty=>0,
+				numthr=>0,
 				};
     bless $self;
 
@@ -85,7 +93,7 @@ sub new {
 
 	my @bool_feed=(
 				   'major_faults', 'minor_faults', 'cmajor_faults',
-				   'cminor_faults', 'numthr', 'tty', 'jid'
+				   'cminor_faults', 'numthr', 'tty', 'jid', 'stats'
 				   );
 
 	foreach my $feed ( @bool_feed ){
@@ -145,8 +153,8 @@ sub run{
 	}
 
 	my $tb = Text::ANSITable->new;
-	$tb->border_style('Default::none_ascii');  # if not, a nice default is picked
-	$tb->color_theme('Default::no_color');  # if not, a nice default is picked
+	$tb->border_style('Default::none_ascii');
+	$tb->color_theme('Default::no_color');
 
 	#
 	# assemble the headers
@@ -235,6 +243,12 @@ sub run{
 
 	$tb->columns( \@headers );
 
+	my @stats_rss;
+	my @stats_vsz;
+	my @stats_time;
+	my @stats_pctcpu;
+	my @stats_pctmem;
+
 	my @td;
 	foreach my $proc ( @{ $procs } ) {
 		my @new_line;
@@ -258,6 +272,7 @@ sub run{
 		# handles the %CPU
 		#
 		push( @new_line,  color($self->nextColor).$proc->{pctcpu}.color('reset') );
+		if ( $self->{stats} ){ push( @stats_pctcpu, $proc->{pctcpu} ); }
 
 		#
 		# handles the %MEM
@@ -265,19 +280,23 @@ sub run{
 		if ( $^O =~ /bsd/ ) {
 			my $mem=(($proc->{rssize} * 1024 * 4 ) / $physmem) * 100;
 			push( @new_line,  color($self->nextColor).sprintf('%.2f', $mem).color('reset') );
+			if ( $self->{stats} ){ push( @stats_pctmem, $mem ); }
 		} else {
-			push( @new_line,  color($self->nextColor).sprintf('%.2f', $proc->{pctcpu}).color('reset') );
+			push( @new_line,  color($self->nextColor).sprintf('%.2f', $proc->{pctmem}).color('reset') );
+			if ( $self->{stats} ){ push( @stats_pctmem, $proc->{pctmem} ); }
 		}
 
 		#
 		# handles VSZ
 		#
 		push( @new_line,  $self->memString( $proc->{size}, 'vsz') );
+		if ( $self->{stats} ){ push( @stats_vsz, $proc->{size} ); }
 
 		#
 		# handles the rss
 		#
 		push( @new_line, $self->memString( $proc->{rss}, 'rss')  );
+		if ( $self->{stats} ){ push( @stats_rss, $proc->{rss} ); }
 
 		#
 		# handles the info
@@ -458,6 +477,7 @@ sub run{
 		# handles the time column
 		#
 		push( @new_line,  $self->timeString( $proc->{time} ) );
+		if ( $self->{stats} ){ push( @stats_time, $proc->{time} ); }
 
 		#
 		# handle the command
@@ -476,7 +496,121 @@ sub run{
 
 	$tb->add_rows( \@td );
 
-	return $tb->draw;
+	my $stats='';
+	if ( $self->{stats} ){
+		my $stb = Text::ANSITable->new;
+		$stb->border_style('Default::none_ascii');
+		$stb->color_theme('Default::no_color');
+
+		#
+		# assemble the headers
+		#
+		my @stats_headers;
+		push( @stats_headers, ' ' );
+		$stb->set_column_style($header_int, pad => 0);
+		push( @stats_headers, 'Min' );
+		$stb->set_column_style($header_int, pad => 1);
+		push( @stats_headers, 'Avg' );
+		$stb->set_column_style($header_int, pad => 0);
+		push( @stats_headers, 'Med' );
+		$stb->set_column_style($header_int, pad => 1);
+		push( @stats_headers, 'Max' );
+		$stb->set_column_style($header_int, pad => 0);
+		push( @stats_headers, 'StdDev' );
+		$stb->set_column_style($header_int, pad => 1);
+		push( @stats_headers, 'Sum' );
+		$stb->set_column_style($header_int, pad => 0);
+
+		$stb->columns( \@stats_headers );
+
+		my @std;
+
+		my $stats_avg=avg(@stats_pctcpu);
+		$stats_avg=~s/\,//g;
+		my $stats_median=median(@stats_pctcpu);
+		$stats_median=~s/\,//g;
+		my $stats_stddev=stddev(@stats_pctcpu);
+		$stats_stddev=~s/\,//g;
+		push( @std, [
+					 'CPU%',
+					 sprintf('%.2f', min( @stats_pctcpu )),
+					 $stats_avg,
+					 $stats_median,
+					 sprintf('%.2f', max( @stats_pctcpu )),
+					 $stats_stddev,
+					 sprintf('%.2f', sum( @stats_pctcpu )),
+					 ]);
+
+		$stats_avg=avg(@stats_pctmem);
+		$stats_avg=~s/\,//g;
+		$stats_median=median(@stats_pctmem);
+		$stats_median=~s/\,//g;
+		$stats_stddev=stddev(@stats_pctmem);
+		$stats_stddev=~s/\,//g;
+		push( @std, [
+					 'Mem%',
+					 sprintf('%.2f', min( @stats_pctmem )),
+					 $stats_avg,
+					 $stats_median,
+					 sprintf('%.2f', max( @stats_pctmem )),
+					 $stats_stddev,
+					 sprintf('%.2f', sum( @stats_pctmem )),
+					 ]);
+
+		$stats_avg=avg(@stats_vsz);
+		$stats_avg=~s/\,//g;
+		$stats_median=median(@stats_vsz);
+		$stats_median=~s/\,//g;
+		$stats_stddev=stddev(@stats_vsz);
+		$stats_stddev=~s/\,//g;
+		push( @std, [
+					 'VSZ',
+					 $self->memString( min( @stats_vsz), 'vsz'),
+					 $self->memString( $stats_avg, 'vsz'),
+					 $self->memString( $stats_median, 'vsz'),
+					 $self->memString( max( @stats_vsz ), 'vsz'),
+					 $self->memString( $stats_stddev, 'vsz'),
+					 $self->memString( sum( @stats_vsz), 'vsz'),
+					 ]);
+
+		$stats_avg=avg(@stats_rss);
+		$stats_avg=~s/\,//g;
+		$stats_median=median(@stats_rss);
+		$stats_median=~s/\,//g;
+		$stats_stddev=stddev(@stats_rss);
+		$stats_stddev=~s/\,//g;
+		push( @std, [
+					 'RSS',
+					 $self->memString( min( @stats_rss ), 'rss'),
+					 $self->memString( $stats_avg, 'rss'),
+					 $self->memString( $stats_median, 'rss'),
+					 $self->memString( max( @stats_rss ), 'rss'),
+					 $self->memString( $stats_stddev, 'rss'),
+					 $self->memString( sum( @stats_rss ), 'rss'),
+					 ]);
+
+		$stats_avg=avg(@stats_time);
+		$stats_avg=~s/\,//g;
+		$stats_median=median(@stats_time);
+		$stats_median=~s/\,//g;
+		$stats_stddev=stddev(@stats_time);
+		$stats_stddev=~s/\,//g;
+		push( @std, [
+					 'Time',
+					 $self->timeString( min( @stats_time ) ),
+					 $self->timeString( $stats_avg ),
+					 $self->timeString( $stats_median ),
+					 $self->timeString( max( @stats_time ) ),,
+					 $self->timeString( $stats_stddev ),
+					 $self->timeString( sum( @stats_time ) ),
+					 ]);
+
+		$stb->add_rows( \@std );
+
+		$stats="\n".$stb->draw;
+	}
+
+	return $tb->draw.$stats;
 }
 
 =head2 startString
