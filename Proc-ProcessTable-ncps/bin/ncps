@@ -424,7 +424,7 @@ if ( defined( $ENV{NCPS_majflt} ) ){
 if ( defined( $ENV{NCPS_cminflt} ) ){
 	$cminor_faults = $cminor_faults ^ 1;
 }
-if ( defined( $ENV{NCPS_majflt} ) ){
+if ( defined( $ENV{NCPS_minflt} ) ){
 	$minor_faults = $minor_faults ^ 1;
 }
 if ( defined( $ENV{NCPS_tty} ) ){
@@ -492,3 +492,248 @@ my $args={
 my $ncps=Proc::ProcessTable::ncps->new( $args );
 print $ncps->run;
 exit 0;
+
+=head1 NAME
+
+ncps - Searches the process table and displays the results.
+
+=head1 SYNOPSIS
+
+ncps [B<-c> <regex>] [B<--ci>] [B<--cf>] [B<--cF>] [B<--eg>] [B<--egi>]
+[B<-f>] [B<-F>] [B<-J>] [B<-j> <JIDs>] [B<--ji>] [B<--idle>] [B<--kern>]
+[B<--kerni>] [B<-m> <pctmem>] [B<--mi>] [B<-n>] [B<--nc>] [B<-p> <pctcpu>]
+[B<--pi>] [B<--pid> <PIDs>] [B<--pidi>] [B<-r> <RSS>] [B<--ri>] [B<-s>]
+[B<--si>] [B<--self>] [B<--st> <states>] [B<--sti>] [B<--stats>]
+[B<-t> <times>] [B<--ti>] [B<--tty>] [B<-u> <UIDs>] [B<--ui>] [B<--vs> <VSZs>]
+[B<--vsi>] [B<-w> <WChans>] [B<--wi>] [B<-z>]
+
+=head1 DESCRIPTION
+
+
+=head1 SWITCHES
+
+=head2 -c <regex>
+
+Search procs using the matching regex.
+
+=head2 --ci
+
+Invert the command search.
+
+=head2 --cf
+
+Show children minor faults.
+
+=head2 --cF
+
+Show children major faults.
+
+=head2 --eg
+
+Search for proccs with a EGID set.
+
+=head2 --egi
+
+Invert the EGID set search.
+
+=head2 --eu
+
+Search for proccs with a EUID set.
+
+=head2 --eui
+
+Invert the EUID set search.
+
+=head2 -f
+
+Show minor faults.
+
+=head2 -F
+
+Show major faults.
+
+=head2 -J
+
+Show jail IDs.
+
+=head2 -j <jids>
+
+A comma seperated list of JIDs to search for.
+
+=head2 --ji
+
+Invert the JIDs earch.
+
+=head2 --idle
+
+Show the idle kernel process.
+
+=head2 --kern
+
+Searches for kernel processes.
+
+=head2 --kerni
+
+Invert the kernel process search.
+
+=head2 -m <pctmem>
+
+Memory usage percent to search for.
+
+=head2 --mi
+
+Invert the memory usage search.
+
+=head2 -n
+
+Show number of threads.
+
+=head2 --nc
+
+Disable color.
+
+=head2 -p <pctcpu>
+
+CPU usage percent to search for.
+
+=head2 --pi
+
+Invert the CPU usage search.
+
+=head2 --pid <pids>
+
+PIDs to search for.
+
+=head2 --pidi
+
+Invert the PID search.
+
+=head2 -r <RSSs>
+
+A comma seperated list of RSS values to search for.
+
+=head2 --ri
+
+Invert the RSS search.
+
+=head2 -s
+
+Show swapped out procs.
+
+=head2 --si
+
+Invert the swapped out search.
+
+=head2 --self
+
+Show the the ncps process as well.
+
+=head2 --st <states>
+
+A comma seperated list of states to search for.
+
+=head2 --sti
+
+Invert the state search.
+
+=head2 --stats
+
+Print some general states about CPU usage and memory usage.
+
+=head2 -t <times>
+
+A comma seperated value of time, in seconds, to search for.
+
+=head2 --ti
+
+Invert the time search.
+
+=head2 --tty
+
+Show TTYs.
+
+=head2 -u <UIDs>
+
+A comma seperated list of UIDs or usernames.
+
+=head2 --ui
+
+Invert the UID/username search.
+
+=head2 -vs <VSZs>
+
+A comma seperated list of VSZs to search for.
+
+=head2 --vsi
+
+Invert the VSZ search.
+
+=head2 -w <wchans>
+
+A string search for wait channels.
+
+=head2 --wi
+
+Invert the wait channel search.
+
+=head2 -z
+
+Show zombies procs.
+
+=head1 EQUALITIES
+
+For the various switches above that can take numeric values,
+the equalities below can be used, by directly prepending them to
+the number.
+
+    <
+    <=
+    >
+    >=
+    !
+
+=head1 ENVIROMENTAL VARIABLES
+
+The enviromental variables below may be set to
+set the default for the flag in question.
+
+Unless set to defined ands set to 1, these will
+default to 0.
+
+=head2 NCPS_jid
+
+Sets the default for the -J flag.
+
+=head2 NCPS_numthr
+
+Sets the default for the -n flag.
+
+=head2 NCPS_cmajflt
+
+Sets the default for the --cF flag.
+
+=head2 NCPS_majflt
+
+Sets the default for the -F flag.
+
+=head2 NCPS_cminflt
+
+Sets the default for the --cf flag.
+
+=head2 NCPS_minflt
+
+Sets the default for the -f flag.
+
+=head2 NCPS_tty
+
+Sets the default for the --tty flag.
+
+=head2 NCPS_self
+
+Sets the default for the --self flag.
+
+=head2 NCPS_idle
+
+Sets the default for the --idle flag.
+
+=cut
