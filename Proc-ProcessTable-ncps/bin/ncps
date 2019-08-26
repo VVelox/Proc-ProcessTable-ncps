@@ -509,6 +509,8 @@ ncps [B<-c> <regex>] [B<--ci>] [B<--cf>] [B<--cF>] [B<--eg>] [B<--egi>]
 
 =head1 DESCRIPTION
 
+No flags needed passed to use. By default it will show all processes except
+for its own and the idle process.
 
 =head1 SWITCHES
 
@@ -735,5 +737,27 @@ Sets the default for the --self flag.
 =head2 NCPS_idle
 
 Sets the default for the --idle flag.
+
+=head2 NO_COLOR
+
+Don't colorize the output.
+
+=head1 EXAMPLES
+
+    ncps -J -j 0 --ji
+
+Display all processes with a jail ID other than zero.
+
+    ncps -c firefox --stats
+
+Show all firefox processes and the stats for them.
+
+    ncps -F -f -cF -cf
+
+Show all minor/major values for processes.
+
+    ncps -p '>1'
+
+Show all processes using more than 1% of the CPU time.
 
 =cut
