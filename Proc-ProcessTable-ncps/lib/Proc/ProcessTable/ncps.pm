@@ -732,7 +732,7 @@ sub timeString{
         my $time=$_[1];
 
 		if ( $^O =~ /^linux$/ ){
-			$time=$time/100000;
+			$time=$time/1000000;
 		}
 
         my $hours=0;
