@@ -16,17 +16,17 @@ Proc::ProcessTable::ncps - The great new Proc::ProcessTable::ncps!
 
 =head1 VERSION
 
-Version 0.0.0
+Version 0.0.1
 
 =cut
 
-our $VERSION = '0.0.0';
+our $VERSION = '0.0.1';
 
 
 =head1 SYNOPSIS
 
     use Proc::ProcessTable::ncps;
-
+    
     my $args={
                   cmajor_faults=>0,
                   cminor_faults=>0,
@@ -40,10 +40,9 @@ our $VERSION = '0.0.0';
                           checks=>\@filters,
                          }
                   };
-
-
+    
     my $ncps = Proc::ProcessTable::ncps->new( \%args );
-
+    
     print $ncps->run
 
 =head1 METHODS
