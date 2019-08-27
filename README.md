@@ -1,5 +1,5 @@
 # About
-New Colorized PS, a enhanced version of PS with advanced searching capabilities.
+New Colorized(optional) PS, a enhanced version of PS with advanced searching capabilities.
 
 ![ncps](ncps.png)
 
