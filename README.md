@@ -104,6 +104,12 @@ the number.
 
 # Enviromental Variables
 
+The enviromental variables below may be set to set the default for the
+flag in question.
+
+Unless set to defined ands set to 1, these will default to 0.
+
+
 | Variable |  Description  |
 | -------- | ---------------- |
 |  NCPS_jid | Sets the default for the -J flag.    |
