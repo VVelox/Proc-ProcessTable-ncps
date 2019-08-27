@@ -102,6 +102,40 @@ the number.
 !
 ```
 
+# Enviromental Variables
+
+| Variable |  Description  |
+| -------- | ---------------- |
+|  NCPS_jid | Sets the default for the -J flag.    |
+|   NCPS_numthr | Sets the default for the -n flag.|
+|   NCPS_cmajflt | Sets the default for the --cF flag. |
+|   NCPS_majflt | Sets the default for the -F flag. |
+|  NCPS_cminflt | Sets the default for the --cf flag. |
+|  NCPS_minflt | Sets the default for the -f flag. |
+|  NCPS_tty | Sets the default for the --tty flag. |
+|  NCPS_self | Sets the default for the --self flag. |
+|  NCPS_idle | Sets the default for the --idle flag. |
+|  NO_COLOR | Don't colorize the output. |
+
+
+# EXAMPLES
+    ncps -J -j 0 --ji
+
+Display all processes with a jail ID other than zero.
+
+    ncps -c firefox --stats
+
+Show all firefox processes and the stats for them.
+
+    ncps -F -f -cF -cf
+
+Show all minor/major values for processes.
+
+    ncps -p '>1'
+
+Show all processes using more than 1% of the CPU time.
+
+
 # Installing
 
 ## FreeBSD
