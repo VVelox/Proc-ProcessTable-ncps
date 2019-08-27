@@ -731,6 +731,10 @@ sub timeString{
         my $self=$_[0];
         my $time=$_[1];
 
+		if ( $^O =~ /^linux$/ ){
+			$time=$time/100000;
+		}
+
         my $hours=0;
         if ( $time >= 3600 ){
                 $hours = $time / 3600;
