@@ -46,6 +46,9 @@ our $VERSION = '0.1.0';
     
     print $ncps->run
 
+The info column is provided by L<Proc::ProcessTable::InfoString>. That
+POD has the information on what they all mean.
+
 =head1 METHODS
 
 =head2 new
