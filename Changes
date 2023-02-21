@@ -1,5 +1,8 @@
 Revision history for Proc-ProcessTable-ncps
 
+0.1.3	 2023-?/?
+		 - Minor cleanup.
+
 0.1.2	 2020-12-30/05:00
 		 - Now use ColorThemes::Standard.
 		 - Fix --stats.
