@@ -3,6 +3,8 @@ lib/Proc/ProcessTable/ncps.pm
 Makefile.PL
 MANIFEST			This list of files
 README.md
+bin/.exists
+src_bin/ncps
 t/00-load.t
 t/manifest.t
 t/pod-coverage.t
