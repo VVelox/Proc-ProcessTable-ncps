@@ -457,8 +457,9 @@ sub run{
 		#
 		if ( $have_field{pctcpu} ){
 			my $pctcpu=$proc->{pctcpu};
-			if ( ! defined( $pctcpu ) ){ $pctcpu=0; }
-			push( @new_line,  color($self->nextColor).$pctcpu.color('reset') );
+			# Proc::ProcessTable reports inf/nan for freshly started processes
+			if ( ( ! defined( $pctcpu ) ) || ( $pctcpu !~ /^\s*[0-9]*\.?[0-9]+\s*$/ ) ){ $pctcpu=0; }
+			push( @new_line,  color($self->nextColor).sprintf('%.2f', $pctcpu).color('reset') );
 			if ( $self->{stats} ){ push( @stats_pctcpu, $pctcpu ); }
 		}
 
