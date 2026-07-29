@@ -1,7 +1,8 @@
 Revision history for Proc-ProcessTable-ncps
 
-0.2.1    2026-07-?/?
+0.2.1    2026-07-28/23:15
          - add a inf/nan fix that can crop up on linux for pctcpu
+         - perltidy
 
 0.2.0    2026-07-28/22:30
          - Fix -z.
