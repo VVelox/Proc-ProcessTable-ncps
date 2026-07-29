@@ -13,7 +13,7 @@ use Proc::ProcessTable::InfoString;
 
 =head1 NAME
 
-Proc::ProcessTable::ncps - New Colorized(optional) PS, a enhanced version of PS with advanced searching capabilities
+Proc::ProcessTable::ncps - New Colorized(optional) PS, an enhanced version of PS with advanced searching capabilities
 
 =head1 VERSION
 
@@ -59,8 +59,8 @@ This initiates the object.
 
 =head4 match
 
-This is a hash to pash to L<Proc::ProcessTable::Match>. If not specified,
-this it will not be used all processes will be displayed.
+This is a hash to pass to L<Proc::ProcessTable::Match>. If not specified,
+it will not be used and all processes will be displayed.
 
 =head4 cmajor_faults
 
@@ -92,6 +92,12 @@ Boolean for if the JIDs column should be shown.
 
 Default: 0
 
+=head4 numthr
+
+Boolean for if the number of threads column should be shown.
+
+Default: 0
+
 =head4 stats
 
 Boolean for if stats for PctCPU, PctMem, VSZ, RSS
@@ -115,7 +121,6 @@ sub new {
 
 
 	my $self = {
-				invert=>0,
 				match=>undef,
 				minor_faults=>0,
 				major_faults=>0,
@@ -168,7 +173,9 @@ sub new {
 				   );
 
 	foreach my $feed ( @bool_feed ){
-		$self->{$feed}=$args{$feed};
+		if ( defined( $args{$feed} ) ){
+			$self->{$feed}=$args{$feed};
+		}
 	}
 
 	return $self;
@@ -222,6 +229,29 @@ sub run{
 		$have_pri=1;
 	}
 
+	# disable optional columns for fields this platform does not support
+	my %optional_column_fields=(
+								jid=>'jid',
+								numthr=>'numthr',
+								tty=>'ttydev',
+								major_faults=>'majflt',
+								minor_faults=>'minflt',
+								cmajor_faults=>'cmajflt',
+								cminor_faults=>'cminflt',
+								);
+	foreach my $optional_column ( keys( %optional_column_fields ) ){
+		my $required_field=$optional_column_fields{$optional_column};
+		if (
+			$self->{$optional_column} &&
+			(
+			 ! defined( $procs->[0] ) ||
+			 ! defined( $procs->[0]->{$required_field} )
+			 )
+			){
+			$self->{$optional_column}=0;
+		}
+	}
+
 	my $physmem;
 	if ( $^O =~ /bsd/ ){
 		$physmem=`/sbin/sysctl -a hw.physmem`;
@@ -252,6 +282,8 @@ sub run{
 	push( @headers, 'RSS' );
 	$tb->set_column_style($header_int, pad => 1); $header_int++;
 	push( @headers, 'Info' );
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	# add nice if needed
 	if ( $have_nice ){
 		push( @headers, 'Nic' );
@@ -288,13 +320,13 @@ sub run{
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
-	# add children minor faults if needed
+	# add number of threads if needed
 	if ( $self->{numthr} ){
 		push( @headers, 'Thr' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
-	# add children minor faults if needed
+	# add TTY if needed
 	if ( $self->{tty} ){
 		push( @headers, 'TTY' );
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
@@ -306,8 +338,6 @@ sub run{
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
-	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
-	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	push( @headers, 'Start' );
 	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
@@ -406,7 +436,7 @@ sub run{
 		}
 
 		#
-		# major faults
+		# minor faults
 		#
 		if ( $self->{minor_faults} ) {
 			push( @new_line, color($self->nextColor).$proc->{minflt}.color('reset') );
@@ -420,7 +450,7 @@ sub run{
 		}
 
 		#
-		# children major faults
+		# children minor faults
 		#
 		if ( $self->{cminor_faults} ) {
 			push( @new_line, color($self->nextColor).$proc->{cminflt}.color('reset') );
@@ -434,7 +464,7 @@ sub run{
 		}
 
 		#
-		# number of threads
+		# TTY
 		#
 		if ( $self->{tty} ) {
 			push( @new_line, color($self->nextColor).$proc->{ttydev}.color('reset') );
@@ -462,7 +492,7 @@ sub run{
 		# handle the command
 		#
 		my $command=color($self->{processColor});
-		if ( $proc->{cmndline} =~ /^$/ ) {
+		if ( ( ! defined( $proc->{cmndline} ) ) || ( $proc->{cmndline} =~ /^$/ ) ) {
 			$command=$command.'['.$proc->{fname}.']';
 		} else {
 			$command=$command.$proc->{cmndline};
@@ -476,7 +506,7 @@ sub run{
 	$tb->add_rows( \@td );
 
 	my $stats='';
-	if ( $self->{stats} ){
+	if ( $self->{stats} && defined( $stats_pctcpu[0] ) ){
 		my $stb = Text::ANSITable->new;
 		#$stb->border_style('Default::none_ascii');
 		$stb->border_style('ASCII::None');
@@ -486,20 +516,21 @@ sub run{
 		# assemble the headers
 		#
 		my @stats_headers;
+		my $stats_header_int=0;
 		push( @stats_headers, ' ' );
-		$stb->set_column_style($header_int, pad => 0);
+		$stb->set_column_style($stats_header_int, pad => 0); $stats_header_int++;
 		push( @stats_headers, 'Min' );
-		$stb->set_column_style($header_int, pad => 1);
+		$stb->set_column_style($stats_header_int, pad => 1); $stats_header_int++;
 		push( @stats_headers, 'Avg' );
-		$stb->set_column_style($header_int, pad => 0);
+		$stb->set_column_style($stats_header_int, pad => 0); $stats_header_int++;
 		push( @stats_headers, 'Med' );
-		$stb->set_column_style($header_int, pad => 1);
+		$stb->set_column_style($stats_header_int, pad => 1); $stats_header_int++;
 		push( @stats_headers, 'Max' );
-		$stb->set_column_style($header_int, pad => 0);
+		$stb->set_column_style($stats_header_int, pad => 0); $stats_header_int++;
 		push( @stats_headers, 'StdDev' );
-		$stb->set_column_style($header_int, pad => 1);
+		$stb->set_column_style($stats_header_int, pad => 1); $stats_header_int++;
 		push( @stats_headers, 'Sum' );
-		$stb->set_column_style($header_int, pad => 0);
+		$stb->set_column_style($stats_header_int, pad => 0);
 
 		$stb->columns( \@stats_headers );
 
@@ -580,7 +611,7 @@ sub run{
 					 $self->timeString( min( @stats_time ) ),
 					 $self->timeString( $stats_avg ),
 					 $self->timeString( $stats_median ),
-					 $self->timeString( max( @stats_time ) ),,
+					 $self->timeString( max( @stats_time ) ),
 					 $self->timeString( $stats_stddev ),
 					 $self->timeString( sum( @stats_time ) ),
 					 ]);
@@ -643,19 +674,19 @@ sub timeString{
 
         my $hours=0;
         if ( $time >= 3600 ){
-                $hours = $time / 3600;
+                $hours = int( $time / 3600 );
         }
         my $loSeconds = $time % 3600;
         my $minutes=0;
         if ( $time >= 60 ){
-                $minutes = $loSeconds / 60;
+                $minutes = int( $loSeconds / 60 );
         }
-        my $seconds = $loSeconds % 60;
+        my $seconds = ( $loSeconds % 60 ) + ( $time - int( $time ) );
 
-        #nicely format it
-        $hours=~s/\..*//;
-        $minutes=~s/\..*//;
-        $seconds=sprintf('%.f',$seconds);
+        #nicely format it, rounding seconds to two optional decimal places
+        $seconds=sprintf('%.2f', $seconds);
+        $seconds=~s/0+$//;
+        $seconds=~s/\.$//;
 
         #this will be returned
         my $toReturn='';
@@ -697,19 +728,24 @@ sub memString{
 
 		my $toReturn='';
 
-		if ( $mem < '10000' ){
+		if ( $mem < 10000 ){
+			$mem=sprintf('%.2f', $mem);
+			$mem=~s/0+$//;
+			$mem=~s/\.$//;
 			$toReturn=color( $self->{$type.'Colors'}[0] ).$mem;
 		}elsif(
-			   ( $mem >= '10000' ) &&
-			   ( $mem < '1000000' )
+			   ( $mem >= 10000 ) &&
+			   ( $mem < 1000000 )
 			   ){
-			$mem=$mem/1000;
+			$mem=sprintf('%.3f', $mem/1000);
+			$mem=~s/0+$//;
+			$mem=~s/\.$//;
 
 			$toReturn=color( $self->{$type.'Colors'}[0] ).$mem.
 			color( $self->{$type.'Colors'}[3] ).'k';
 		}elsif(
-			   ( $mem >= '1000000' ) &&
-			   ( $mem < '1000000000' )
+			   ( $mem >= 1000000 ) &&
+			   ( $mem < 1000000000 )
 			   ){
 			$mem=($mem/1000)/1000;
 			$mem=sprintf('%.3f', $mem);
@@ -717,7 +753,7 @@ sub memString{
 
 			$toReturn=color( $self->{$type.'Colors'}[1] ).$mem_split[0].'.'.color( $self->{$type.'Colors'}[0] ).$mem_split[1].
 			color( $self->{$type.'Colors'}[3] ).'M';
-		}elsif( $mem >= '1000000000' ){
+		}elsif( $mem >= 1000000000 ){
 			$mem=(($mem/1000)/1000)/1000;
 			$mem=sprintf('%.3f', $mem);
 			my @mem_split=split(/\./, $mem);
