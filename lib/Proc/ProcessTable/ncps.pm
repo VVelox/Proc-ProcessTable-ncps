@@ -10,6 +10,7 @@ use Term::ANSIColor;
 use Statistics::Basic qw(:all);
 use List::Util qw( min max sum );
 use Proc::ProcessTable::InfoString;
+use POSIX ();
 
 =head1 NAME
 
@@ -17,17 +18,17 @@ Proc::ProcessTable::ncps - New Colorized(optional) PS, an enhanced version of PS
 
 =head1 VERSION
 
-Version 0.1.3
+Version 0.2.0
 
 =cut
 
-our $VERSION = '0.1.3';
+our $VERSION = '0.2.0';
 
 
 =head1 SYNOPSIS
 
     use Proc::ProcessTable::ncps;
-    
+
     my $args={
                   cmajor_faults=>0,
                   cminor_faults=>0,
@@ -41,9 +42,9 @@ our $VERSION = '0.1.3';
                           checks=>\@filters,
                          }
                   };
-    
+
     my $ncps = Proc::ProcessTable::ncps->new( \%args );
-    
+
     print $ncps->run
 
 The info column is provided by L<Proc::ProcessTable::InfoString>. That
@@ -197,15 +198,62 @@ sub run{
 	my $ppt = Proc::ProcessTable->new( 'cache_ttys' => 1 );
 	my $pt = $ppt->table;
 
+	# if this platform does not provide the rss field, compute it from
+	# rssize, which is in pages, so it is usable for both matching and
+	# display... no such fallback is possible for the size field as
+	# tsize+dsize+ssize misses shared libraries and other mappings
+	if (
+		defined( $pt->[0] ) &&
+		( ! defined( $pt->[0]->{rss} ) ) &&
+		defined( $pt->[0]->{rssize} )
+		){
+		my $pagesize;
+		eval{
+			$pagesize=POSIX::sysconf( POSIX::_SC_PAGESIZE() );
+		};
+		if ( $pagesize ){
+			foreach my $proc ( @{ $pt } ){
+				my $rssize=$proc->{rssize};
+				if ( ! defined( $rssize ) ){ $rssize=0; }
+				$proc->{rss}=$rssize * $pagesize;
+			}
+		}
+	}
+
+	# if this platform does not provide the pctmem field, compute it
+	# if possible so it is usable for both matching and display,
+	# using rss as Proc::ProcessTable provides it in bytes everywhere
+	if (
+		defined( $pt->[0] ) &&
+		( ! defined( $pt->[0]->{pctmem} ) ) &&
+		defined( $pt->[0]->{rss} )
+		){
+		my $physmem=$self->physmem;
+		if ( defined( $physmem ) ){
+			foreach my $proc ( @{ $pt } ){
+				my $rss=$proc->{rss};
+				if ( ! defined( $rss ) ){ $rss=0; }
+				$proc->{pctmem}=( $rss / $physmem ) * 100;
+			}
+		}
+	}
+
 	my $procs;
 	if ( defined( $self->{match} ) ){
 		$procs=[];
+		my $match_error;
 		foreach my $proc ( @{ $pt } ){
 			eval{
 				if ( $self->{match}->match( $proc ) ){
 					push( @{ $procs }, $proc );
 				}
 			};
+			if ( $@ && ( ! defined( $match_error ) ) ){
+				$match_error=$@;
+			}
+		}
+		if ( defined( $match_error ) ){
+			warn( 'One or more processes errored during matching... first error... '.$match_error );
 		}
 	}else{
 		$procs=$pt;
@@ -252,11 +300,16 @@ sub run{
 		}
 	}
 
-	my $physmem;
-	if ( $^O =~ /bsd/ ){
-		$physmem=`/sbin/sysctl -a hw.physmem`;
-		chomp( $physmem );
-		$physmem=~s/^.*\: //;
+	# figures out which of the standard columns this platform supports
+	my %have_field;
+	foreach my $standard_field ( 'pctcpu', 'pctmem', 'size', 'rss', 'time', 'start' ){
+		$have_field{$standard_field}=0;
+		if (
+			defined( $procs->[0] ) &&
+			defined( $procs->[0]->{$standard_field} )
+			){
+			$have_field{$standard_field}=1;
+		}
 	}
 
 	my $tb = Text::ANSITable->new;
@@ -270,17 +323,35 @@ sub run{
 	my $header_int=0;
 	my $padding=0;
 	push( @headers, 'User' );
-	$tb->set_column_style($header_int, pad => 0); $header_int++;
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	push( @headers, 'PID' );
-	$tb->set_column_style($header_int, pad => 1); $header_int++;
-	push( @headers, 'CPU' );
-	$tb->set_column_style($header_int, pad => 0); $header_int++;
-	push( @headers, 'MEM' );
-	$tb->set_column_style($header_int, pad => 1); $header_int++;
-	push( @headers, 'VSZ' );
-	$tb->set_column_style($header_int, pad => 0); $header_int++;
-	push( @headers, 'RSS' );
-	$tb->set_column_style($header_int, pad => 1); $header_int++;
+	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	# add CPU percent if needed
+	if ( $have_field{pctcpu} ){
+		push( @headers, 'CPU' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add memory percent if needed
+	if ( $have_field{pctmem} ){
+		push( @headers, 'MEM' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add VSZ if needed
+	if ( $have_field{size} ){
+		push( @headers, 'VSZ' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add RSS if needed
+	if ( $have_field{rss} ){
+		push( @headers, 'RSS' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
 	push( @headers, 'Info' );
 	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
@@ -338,12 +409,18 @@ sub run{
 		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
 	}
-	push( @headers, 'Start' );
-	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
-	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
-	push( @headers, 'Time' );
-	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
-	$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	# add start time if needed
+	if ( $have_field{start} ){
+		push( @headers, 'Start' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
+	# add CPU time if needed
+	if ( $have_field{time} ){
+		push( @headers, 'Time' );
+		if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
+		$tb->set_column_style($header_int, pad => $padding ); $header_int++;
+	}
 	push( @headers, 'Command' );
 	if (( $header_int % 2 ) != 0){ $padding=1; }else{ $padding=0; }
 	$tb->set_column_style($header_int, pad => $padding, formats=>[[wrap => {ansi=>1, mb=>1}]]);
@@ -378,32 +455,42 @@ sub run{
 		#
 		# handles the %CPU
 		#
-		push( @new_line,  color($self->nextColor).$proc->{pctcpu}.color('reset') );
-		if ( $self->{stats} ){ push( @stats_pctcpu, $proc->{pctcpu} ); }
+		if ( $have_field{pctcpu} ){
+			my $pctcpu=$proc->{pctcpu};
+			if ( ! defined( $pctcpu ) ){ $pctcpu=0; }
+			push( @new_line,  color($self->nextColor).$pctcpu.color('reset') );
+			if ( $self->{stats} ){ push( @stats_pctcpu, $pctcpu ); }
+		}
 
 		#
 		# handles the %MEM
 		#
-		if ( $^O =~ /bsd/ ) {
-			my $mem=(($proc->{rssize} * 1024 * 4 ) / $physmem) * 100;
-			push( @new_line,  color($self->nextColor).sprintf('%.2f', $mem).color('reset') );
-			if ( $self->{stats} ){ push( @stats_pctmem, $mem ); }
-		} else {
-			push( @new_line,  color($self->nextColor).sprintf('%.2f', $proc->{pctmem}).color('reset') );
-			if ( $self->{stats} ){ push( @stats_pctmem, $proc->{pctmem} ); }
+		if ( $have_field{pctmem} ) {
+			my $pctmem=$proc->{pctmem};
+			if ( ! defined( $pctmem ) ){ $pctmem=0; }
+			push( @new_line,  color($self->nextColor).sprintf('%.2f', $pctmem).color('reset') );
+			if ( $self->{stats} ){ push( @stats_pctmem, $pctmem ); }
 		}
 
 		#
 		# handles VSZ
 		#
-		push( @new_line,  $self->memString( $proc->{size}, 'vsz') );
-		if ( $self->{stats} ){ push( @stats_vsz, $proc->{size} ); }
+		if ( $have_field{size} ){
+			my $size=$proc->{size};
+			if ( ! defined( $size ) ){ $size=0; }
+			push( @new_line,  $self->memString( $size, 'vsz') );
+			if ( $self->{stats} ){ push( @stats_vsz, $size ); }
+		}
 
 		#
 		# handles the rss
 		#
-		push( @new_line, $self->memString( $proc->{rss}, 'rss')  );
-		if ( $self->{stats} ){ push( @stats_rss, $proc->{rss} ); }
+		if ( $have_field{rss} ){
+			my $rss=$proc->{rss};
+			if ( ! defined( $rss ) ){ $rss=0; }
+			push( @new_line, $self->memString( $rss, 'rss')  );
+			if ( $self->{stats} ){ push( @stats_rss, $rss ); }
+		}
 
 		#
 		# handles the info
@@ -480,13 +567,21 @@ sub run{
 		#
 		# handles the start column
 		#
-		push( @new_line, color($self->nextColor).$self->startString( $proc->{start} ).color('reset') );
+		if ( $have_field{start} ){
+			my $start=$proc->{start};
+			if ( ! defined( $start ) ){ $start=0; }
+			push( @new_line, color($self->nextColor).$self->startString( $start ).color('reset') );
+		}
 
 		#
 		# handles the time column
 		#
-		push( @new_line,  $self->timeString( $proc->{time} ) );
-		if ( $self->{stats} ){ push( @stats_time, $proc->{time} ); }
+		if ( $have_field{time} ){
+			my $proc_time=$proc->{time};
+			if ( ! defined( $proc_time ) ){ $proc_time=0; }
+			push( @new_line,  $self->timeString( $proc_time ) );
+			if ( $self->{stats} ){ push( @stats_time, $proc_time ); }
+		}
 
 		#
 		# handle the command
@@ -506,7 +601,7 @@ sub run{
 	$tb->add_rows( \@td );
 
 	my $stats='';
-	if ( $self->{stats} && defined( $stats_pctcpu[0] ) ){
+	if ( $self->{stats} && defined( $procs->[0] ) ){
 		my $stb = Text::ANSITable->new;
 		#$stb->border_style('Default::none_ascii');
 		$stb->border_style('ASCII::None');
@@ -536,85 +631,99 @@ sub run{
 
 		my @std;
 
-		my $stats_avg=avg(@stats_pctcpu);
-		$stats_avg=~s/\,//g;
-		my $stats_median=median(@stats_pctcpu);
-		$stats_median=~s/\,//g;
-		my $stats_stddev=stddev(@stats_pctcpu);
-		$stats_stddev=~s/\,//g;
-		push( @std, [
-					 'CPU%',
-					 sprintf('%.2f', min( @stats_pctcpu )),
-					 $stats_avg,
-					 $stats_median,
-					 sprintf('%.2f', max( @stats_pctcpu )),
-					 $stats_stddev,
-					 sprintf('%.2f', sum( @stats_pctcpu )),
-					 ]);
+		my $stats_avg;
+		my $stats_median;
+		my $stats_stddev;
 
-		$stats_avg=avg(@stats_pctmem);
-		$stats_avg=~s/\,//g;
-		$stats_median=median(@stats_pctmem);
-		$stats_median=~s/\,//g;
-		$stats_stddev=stddev(@stats_pctmem);
-		$stats_stddev=~s/\,//g;
-		push( @std, [
-					 'Mem%',
-					 sprintf('%.2f', min( @stats_pctmem )),
-					 $stats_avg,
-					 $stats_median,
-					 sprintf('%.2f', max( @stats_pctmem )),
-					 $stats_stddev,
-					 sprintf('%.2f', sum( @stats_pctmem )),
-					 ]);
+		if ( $have_field{pctcpu} ){
+			$stats_avg=avg(@stats_pctcpu);
+			$stats_avg=~s/\,//g;
+			$stats_median=median(@stats_pctcpu);
+			$stats_median=~s/\,//g;
+			$stats_stddev=stddev(@stats_pctcpu);
+			$stats_stddev=~s/\,//g;
+			push( @std, [
+						 'CPU%',
+						 sprintf('%.2f', min( @stats_pctcpu )),
+						 $stats_avg,
+						 $stats_median,
+						 sprintf('%.2f', max( @stats_pctcpu )),
+						 $stats_stddev,
+						 sprintf('%.2f', sum( @stats_pctcpu )),
+						 ]);
+		}
 
-		$stats_avg=avg(@stats_vsz);
-		$stats_avg=~s/\,//g;
-		$stats_median=median(@stats_vsz);
-		$stats_median=~s/\,//g;
-		$stats_stddev=stddev(@stats_vsz);
-		$stats_stddev=~s/\,//g;
-		push( @std, [
-					 'VSZ',
-					 $self->memString( min( @stats_vsz), 'vsz'),
-					 $self->memString( $stats_avg, 'vsz'),
-					 $self->memString( $stats_median, 'vsz'),
-					 $self->memString( max( @stats_vsz ), 'vsz'),
-					 $self->memString( $stats_stddev, 'vsz'),
-					 $self->memString( sum( @stats_vsz), 'vsz'),
-					 ]);
+		if ( $have_field{pctmem} ){
+			$stats_avg=avg(@stats_pctmem);
+			$stats_avg=~s/\,//g;
+			$stats_median=median(@stats_pctmem);
+			$stats_median=~s/\,//g;
+			$stats_stddev=stddev(@stats_pctmem);
+			$stats_stddev=~s/\,//g;
+			push( @std, [
+						 'Mem%',
+						 sprintf('%.2f', min( @stats_pctmem )),
+						 $stats_avg,
+						 $stats_median,
+						 sprintf('%.2f', max( @stats_pctmem )),
+						 $stats_stddev,
+						 sprintf('%.2f', sum( @stats_pctmem )),
+						 ]);
+		}
 
-		$stats_avg=avg(@stats_rss);
-		$stats_avg=~s/\,//g;
-		$stats_median=median(@stats_rss);
-		$stats_median=~s/\,//g;
-		$stats_stddev=stddev(@stats_rss);
-		$stats_stddev=~s/\,//g;
-		push( @std, [
-					 'RSS',
-					 $self->memString( min( @stats_rss ), 'rss'),
-					 $self->memString( $stats_avg, 'rss'),
-					 $self->memString( $stats_median, 'rss'),
-					 $self->memString( max( @stats_rss ), 'rss'),
-					 $self->memString( $stats_stddev, 'rss'),
-					 $self->memString( sum( @stats_rss ), 'rss'),
-					 ]);
+		if ( $have_field{size} ){
+			$stats_avg=avg(@stats_vsz);
+			$stats_avg=~s/\,//g;
+			$stats_median=median(@stats_vsz);
+			$stats_median=~s/\,//g;
+			$stats_stddev=stddev(@stats_vsz);
+			$stats_stddev=~s/\,//g;
+			push( @std, [
+						 'VSZ',
+						 $self->memString( min( @stats_vsz), 'vsz'),
+						 $self->memString( $stats_avg, 'vsz'),
+						 $self->memString( $stats_median, 'vsz'),
+						 $self->memString( max( @stats_vsz ), 'vsz'),
+						 $self->memString( $stats_stddev, 'vsz'),
+						 $self->memString( sum( @stats_vsz), 'vsz'),
+						 ]);
+		}
 
-		$stats_avg=avg(@stats_time);
-		$stats_avg=~s/\,//g;
-		$stats_median=median(@stats_time);
-		$stats_median=~s/\,//g;
-		$stats_stddev=stddev(@stats_time);
-		$stats_stddev=~s/\,//g;
-		push( @std, [
-					 'Time',
-					 $self->timeString( min( @stats_time ) ),
-					 $self->timeString( $stats_avg ),
-					 $self->timeString( $stats_median ),
-					 $self->timeString( max( @stats_time ) ),
-					 $self->timeString( $stats_stddev ),
-					 $self->timeString( sum( @stats_time ) ),
-					 ]);
+		if ( $have_field{rss} ){
+			$stats_avg=avg(@stats_rss);
+			$stats_avg=~s/\,//g;
+			$stats_median=median(@stats_rss);
+			$stats_median=~s/\,//g;
+			$stats_stddev=stddev(@stats_rss);
+			$stats_stddev=~s/\,//g;
+			push( @std, [
+						 'RSS',
+						 $self->memString( min( @stats_rss ), 'rss'),
+						 $self->memString( $stats_avg, 'rss'),
+						 $self->memString( $stats_median, 'rss'),
+						 $self->memString( max( @stats_rss ), 'rss'),
+						 $self->memString( $stats_stddev, 'rss'),
+						 $self->memString( sum( @stats_rss ), 'rss'),
+						 ]);
+		}
+
+		if ( $have_field{time} ){
+			$stats_avg=avg(@stats_time);
+			$stats_avg=~s/\,//g;
+			$stats_median=median(@stats_time);
+			$stats_median=~s/\,//g;
+			$stats_stddev=stddev(@stats_time);
+			$stats_stddev=~s/\,//g;
+			push( @std, [
+						 'Time',
+						 $self->timeString( min( @stats_time ) ),
+						 $self->timeString( $stats_avg ),
+						 $self->timeString( $stats_median ),
+						 $self->timeString( max( @stats_time ) ),
+						 $self->timeString( $stats_stddev ),
+						 $self->timeString( sum( @stats_time ) ),
+						 ]);
+		}
 
 		$stb->add_rows( \@std );
 
@@ -766,6 +875,54 @@ sub memString{
 }
 
 
+=head2 physmem
+
+Returns the physical memory size in bytes on platforms it is known
+how to fetch it on. Otherwise undef is returned.
+
+POSIX::sysconf is tried first and failing that sysctl is used.
+
+    my $physmem=$ncps->physmem;
+
+=cut
+
+sub physmem{
+	my $physmem;
+
+	# first try POSIX::sysconf, which requires no external programs,
+	# but not every POSIX module exposes _SC_PHYS_PAGES
+	eval{
+		my $phys_pages=POSIX::sysconf( POSIX::_SC_PHYS_PAGES() );
+		my $pagesize=POSIX::sysconf( POSIX::_SC_PAGESIZE() );
+		if ( $phys_pages && $pagesize ){
+			$physmem=$phys_pages * $pagesize;
+		}
+	};
+
+	# fall back on sysctl, checking the various places it may live
+	if ( ! defined( $physmem ) ){
+		# hw.physmem on OpenBSD is truncated to 32 bits, so use hw.physmem64 there
+		my $physmem_variable='hw.physmem';
+		if ( $^O eq 'openbsd' ){
+			$physmem_variable='hw.physmem64';
+		}
+		foreach my $sysctl_bin ( '/sbin/sysctl', '/usr/sbin/sysctl' ){
+			if ( ( ! defined( $physmem ) ) && ( -x $sysctl_bin ) ){
+				my $sysctl_output=`$sysctl_bin -n $physmem_variable 2> /dev/null`;
+				if ( defined( $sysctl_output ) ){
+					chomp( $sysctl_output );
+					if ( ( $sysctl_output =~ /^[0-9]+$/ ) && ( $sysctl_output > 0 ) ){
+						$physmem=$sysctl_output;
+					}
+				}
+			}
+		}
+	}
+
+	return $physmem;
+}
+
+
 =head2 nextColor
 
 Returns the next color.
@@ -818,14 +975,6 @@ You can also look for information at:
 
 L<https://rt.cpan.org/NoAuth/Bugs.html?Dist=Proc-ProcessTable-ncps>
 
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/Proc-ProcessTable-ncps>
-
-=item * CPAN Ratings
-
-L<https://cpanratings.perl.org/d/Proc-ProcessTable-ncps>
-
 =item * Search CPAN
 
 L<https://metacpan.org/release/Proc-ProcessTable-ncps>
@@ -835,9 +984,6 @@ L<https://metacpan.org/release/Proc-ProcessTable-ncps>
 L<https://github.com/VVelox/Proc-ProcessTable-ncps>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
 
 
 =head1 LICENSE AND COPYRIGHT

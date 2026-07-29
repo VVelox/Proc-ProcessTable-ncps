@@ -3,57 +3,139 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use POSIX ();
+use Proc::ProcessTable;
 use Proc::ProcessTable::ncps;
+
+# figure out what fields this platform supports so switches
+# that require unsupported fields can be hidden and errored on
+my %have_field;
+foreach my $field ( Proc::ProcessTable->new->fields ){
+	$have_field{$field}=1;
+}
+# rss is still usable if it can be computed from rssize and the page size
+if (
+	( ! $have_field{rss} ) &&
+	$have_field{rssize}
+	){
+	my $pagesize;
+	eval{
+		$pagesize=POSIX::sysconf( POSIX::_SC_PAGESIZE() );
+	};
+	if ( $pagesize ){
+		$have_field{rss}=1;
+	}
+}
+# pctmem is still usable if it can be computed from rss and physmem
+if (
+	( ! $have_field{pctmem} ) &&
+	$have_field{rss} &&
+	defined( Proc::ProcessTable::ncps->physmem )
+	){
+	$have_field{pctmem}=1;
+}
 
 sub version{
         print "ncps v. ".$Proc::ProcessTable::ncps::VERSION."\n";
 }
 
 sub help{
-	print '
+	my $help_text='
 
 -c <regex>    Search procs using the matching regex.
 --ci          Invert the command search.
+';
 
+	if ( $have_field{cminflt} ){
+		$help_text=$help_text.'
 --cf          Show children minor faults.
+';
+	}
 
+	if ( $have_field{cmajflt} ){
+		$help_text=$help_text.'
 --cF          Show children major faults.
+';
+	}
 
+	if ( $have_field{egid} ){
+		$help_text=$help_text.'
 --eg          Search for procs with an EGID set.
 --egi         Invert the EGID set search.
+';
+	}
 
+	if ( $have_field{euid} ){
+		$help_text=$help_text.'
 --eu          Search for procs with an EUID set.
 --eui         Invert the EUID set search.
+';
+	}
 
+	if ( $have_field{minflt} ){
+		$help_text=$help_text.'
 -f            Show minor faults.
+';
+	}
 
+	if ( $have_field{majflt} ){
+		$help_text=$help_text.'
 -F            Show major faults.
+';
+	}
 
+	if ( $have_field{jid} ){
+		$help_text=$help_text.'
 -J            Show jail IDs.
 -j <jids>     A comma separated list of JIDs to search for.
 --ji          Invert the JIDs search.
+';
+	}
 
+	$help_text=$help_text.'
 --idle        Show the idle kernel process.
 
 --kern        Searches for kernel processes.
 --kerni       Invert the kernel process search.
+';
 
+	if ( $have_field{pctmem} ){
+		$help_text=$help_text.'
 -m <pctmem>   Memory usage percent to search for.
 --mi          Invert the memory usage search.
+';
+	}
 
+	if ( $have_field{numthr} ){
+		$help_text=$help_text.'
 -n            Show number of threads.
+';
+	}
 
+	$help_text=$help_text.'
 --nc          disable color.
+';
 
+	if ( $have_field{pctcpu} ){
+		$help_text=$help_text.'
 -p <pctcpu>   CPU usage percent to search for.
 --pi          Invert the CPU usage search.
+';
+	}
 
+	$help_text=$help_text.'
 --pid <pids>  PIDs to search for.
 --pidi        Invert the PID search.
+';
 
+	if ( $have_field{rss} ){
+		$help_text=$help_text.'
 -r <RSSs>     A comma separated list of RSS values to search for.
 --ri          Invert the RSS search.
+';
+	}
 
+	$help_text=$help_text.'
 -s            Show swapped out procs.
 --si          Invert the swapped out search.
 
@@ -63,21 +145,41 @@ sub help{
 --sti         Invert the state search.
 
 --stats       Print some general stats about CPU usage and memory usage.
+';
 
+	if ( $have_field{time} ){
+		$help_text=$help_text.'
 -t <times>    A comma separated value of time, in seconds, to search for.
 --ti          Invert the time search.
+';
+	}
 
+	if ( $have_field{ttydev} ){
+		$help_text=$help_text.'
 --tty         Show TTYs.
+';
+	}
 
+	$help_text=$help_text.'
 -u <UIDs>     A comma separated list of UIDs or usernames.
 --ui          Invert the UID/username search.
+';
 
+	if ( $have_field{size} ){
+		$help_text=$help_text.'
 --vs <VSZs>   A comma separated list of VSZs to search for.
 --vsi         Invert the VSZ search.
+';
+	}
 
+	if ( $have_field{wchan} ){
+		$help_text=$help_text.'
 -w <wchans>   A string search for wait channels.
 --wi          Invert the wait channel search.
+';
+	}
 
+	$help_text=$help_text.'
 -z            Show zombie procs.
 
 
@@ -98,16 +200,41 @@ The symbols in the information column are as below.
    S       Sleep
    W       Wait
    R       Run
+   T       Stopped
+   t       Tracing stop
+   I       Idle
+   L       Blocked on a kernel lock
+   D       Uninterruptible sleep
+   X       Dead
+   K       Wakekill
+   P       Parked
+   ?       Unknown state
 
    Flags   Description
    O       Swapped Output
-   E       Exiting
+';
+
+	# flag support varies by OS, so only show the ones
+	# Proc::ProcessTable::InfoString supports on this one
+	if ( $^O =~ /freebsd/ ){
+		$help_text=$help_text.'   E       Exiting
    s       Session Leader
    L       POSIX lock advisory
+   +       has controlling terminal
+   c       controlling tty is active
+   X       traced by a debugger
+   F       being forked
+';
+	}elsif( $^O =~ /linux/ ){
+		$help_text=$help_text.'   E       Exiting
+   s       Session Leader
    +       has controlling terminal
    X       traced by a debugger
    F       being forked
 ';
+	}
+
+	print $help_text;
 }
 
 # defaults
@@ -209,6 +336,29 @@ my $getopt_success = GetOptions(
 		   );
 if ( ! $getopt_success ){
 	warn('Failed to parse the command line options');
+	exit 255;
+}
+
+# error on any switches requiring fields this platform does not support
+my @unusable_switches;
+if ( $minor_faults && ( ! $have_field{minflt} ) ){ push( @unusable_switches, '-f' ); }
+if ( $major_faults && ( ! $have_field{majflt} ) ){ push( @unusable_switches, '-F' ); }
+if ( $cminor_faults && ( ! $have_field{cminflt} ) ){ push( @unusable_switches, '--cf' ); }
+if ( $cmajor_faults && ( ! $have_field{cmajflt} ) ){ push( @unusable_switches, '--cF' ); }
+if ( $numthr && ( ! $have_field{numthr} ) ){ push( @unusable_switches, '-n' ); }
+if ( $tty && ( ! $have_field{ttydev} ) ){ push( @unusable_switches, '--tty' ); }
+if ( $jid && ( ! $have_field{jid} ) ){ push( @unusable_switches, '-J' ); }
+if ( defined( $jids_string ) && ( ! $have_field{jid} ) ){ push( @unusable_switches, '-j' ); }
+if ( defined( $mem_string ) && ( ! $have_field{pctmem} ) ){ push( @unusable_switches, '-m' ); }
+if ( defined( $cpu_string ) && ( ! $have_field{pctcpu} ) ){ push( @unusable_switches, '-p' ); }
+if ( defined( $rss_string ) && ( ! $have_field{rss} ) ){ push( @unusable_switches, '-r' ); }
+if ( defined( $time_string ) && ( ! $have_field{time} ) ){ push( @unusable_switches, '-t' ); }
+if ( defined( $vsz_string ) && ( ! $have_field{size} ) ){ push( @unusable_switches, '--vs' ); }
+if ( defined( $wait_channels_string ) && ( ! $have_field{wchan} ) ){ push( @unusable_switches, '-w' ); }
+if ( $euid && ( ! $have_field{euid} ) ){ push( @unusable_switches, '--eu' ); }
+if ( $egid && ( ! $have_field{egid} ) ){ push( @unusable_switches, '--eg' ); }
+if ( defined( $unusable_switches[0] ) ){
+	warn( 'The following switches can not be used on this OS as the fields they require are not supported: '.join( ' ', @unusable_switches ) );
 	exit 255;
 }
 
@@ -554,6 +704,15 @@ as below.
    S       Sleep
    W       Wait
    R       Run
+   T       Stopped
+   t       Tracing stop
+   I       Idle
+   L       Blocked on a kernel lock
+   D       Uninterruptible sleep
+   X       Dead
+   K       Wakekill
+   P       Parked
+   ?       Unknown state
 
    Flags   Description
    O       Swapped Output
@@ -561,8 +720,17 @@ as below.
    s       Session Leader
    L       POSIX lock advisory
    +       has controlling terminal
+   c       controlling tty is active
    X       traced by a debugger
    F       being forked
+
+Flag support varies by OS. FreeBSD has the fullest support. On Linux the
+flags O, E, s, +, X, and F are supported. On other platforms only O is.
+The ncps -h output only lists the ones usable on the current OS.
+
+Switch availability also varies by OS. Switches requiring process table
+fields the OS does not support are not shown by ncps -h and will error
+if used.
 
 =head1 SWITCHES
 
