@@ -1,6 +1,6 @@
 Revision history for Proc-ProcessTable-ncps
 
-0.2.2    2026-07-30/12:00
+0.2.2    2026-08-02/15:30
          - Stop using the Proc::ProcessTable TTY cache, which is unreadable
            for perls built with a differing double size.
          - Require a Text::ANSI::Util/Text::WideChar::Util pair that works.
