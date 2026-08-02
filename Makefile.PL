@@ -32,7 +32,8 @@ my %WriteMakefileArgs = (
 		'POSIX'                          => '0',
 		'Statistics::Basic'              => '1.6611',
 		'List::Util'                     => '0',
-		'Proc::ProcessTable::InfoString' => '0.1.0',
+		# 0.2.0 for proc_infostring_describe
+		'Proc::ProcessTable::InfoString' => '0.2.0',
 		# Text::ANSITable loads these by name, so they are not prereqs of it
 		'ColorTheme::NoColor'            => '0.003',
 		'BorderStyle::ASCII::None'       => '0.014',
